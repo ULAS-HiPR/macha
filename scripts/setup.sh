@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Macha Camera Monitoring System Setup Script
+# Macha  Setup Script
 # Comprehensive setup for Raspberry Pi with dual camera support
 
 set -e
@@ -8,7 +8,7 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
-echo "Setting up Macha Camera Monitoring System..."
+echo "Setting up Macha ..."
 echo "============================================="
 
 # Check if running on Raspberry Pi
@@ -82,7 +82,7 @@ if [ -f "$BOOT_CONFIG" ]; then
         echo "camera_auto_detect=1" | sudo tee -a "$BOOT_CONFIG"
         echo "Added camera_auto_detect=1 to boot config"
     fi
-    
+
     if ! grep -q "dtoverlay=camera" "$BOOT_CONFIG"; then
         echo "dtoverlay=camera" | sudo tee -a "$BOOT_CONFIG"
         echo "Added dtoverlay=camera to boot config"
@@ -111,10 +111,6 @@ source .venv/bin/activate
 echo "Installing Python dependencies..."
 pip install pyyaml>=6.0.2 colorlog>=6.8.2 sqlalchemy>=2.0.0 aiosqlite>=0.20.0 psutil>=6.1.0 pydantic>=2.0.0
 
-# Create image directories
-echo "Creating image directories..."
-mkdir -p images/cam0 images/cam1
-chmod 755 images/cam0 images/cam1
 
 # Test camera setup
 echo "Testing camera hardware..."
@@ -133,7 +129,7 @@ try:
     print(f'✓ picamera2 working - {len(cameras)} cameras detected')
     for i, cam in enumerate(cameras):
         print(f'  Camera {i}: {cam[\"Model\"]}')
-    
+
     # Quick test of camera initialization
     if cameras:
         print('Testing camera initialization...')
@@ -143,7 +139,7 @@ try:
         picam.stop()
         picam.close()
         print('✓ Camera 0 closed successfully')
-        
+
 except Exception as e:
     print(f'✗ Camera test failed: {e}')
     print('This may be resolved after a reboot.')
@@ -156,13 +152,13 @@ try:
     from src.config import load_config
     config = load_config()
     print(f'✓ Configuration valid with {len(config.tasks)} tasks')
-    
+
     camera_tasks = [t for t in config.tasks if t.class_name == 'CameraTask']
     if camera_tasks:
         print(f'✓ Found {len(camera_tasks)} camera task(s)')
         for task in camera_tasks:
             print(f'  - {task.name}: {len(task.parameters.cameras)} cameras configured')
-    
+
 except Exception as e:
     print(f'✗ Configuration test failed: {e}')
     exit(1)
@@ -173,10 +169,5 @@ echo "Setup completed successfully!"
 echo ""
 echo "IMPORTANT: Reboot required for all changes to take effect:"
 echo "  sudo reboot"
-echo ""
-echo "After reboot, you can:"
-echo "1. Test cameras:     ./scripts/test_camera.py"
-echo "2. Run Macha:        source .venv/bin/activate && python src/main.py"
-echo "3. Deploy service:   sudo ./scripts/deploy.sh"
 echo ""
 echo "Note: You may need to log out and back in for group changes to take effect."

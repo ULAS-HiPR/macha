@@ -1,21 +1,18 @@
-# Macha - Camera Monitoring System
+# Macha
 
-A continuous camera monitoring system for Raspberry Pi 5 with dual camera support, built with Python and Pydantic for robust configuration management.
+CanSat software to collect flight data and pictures to run in-flight on a Coral TPU to segment safe vs unsafe landings.
 
 ## Features
 
-- **Dual Camera Support**: Capture images from both camera ports simultaneously
 - **Configurable Scheduling**: Run tasks at configurable intervals with Pydantic validation
-- **Database Logging**: All captures and metrics logged to SQLite database
 - **System Metrics**: CPU, temperature, memory, and storage monitoring
-- **Graceful Shutdown**: Proper cleanup on termination signals
 - **Schema Validation**: Pydantic-based configuration with comprehensive validation
 - **Systemd Service**: Production-ready deployment with automatic startup
 
 ## Requirements
 
-- Raspberry Pi 5 with dual camera setup
-- Python 3.11+ 
+- Raspberry Pi 5
+- Python 3.11+
 - System camera packages (python3-picamera2, libcamera-apps)
 - SQLite database support
 
@@ -37,49 +34,17 @@ This script will:
 - Test camera functionality
 - Validate configuration
 
-**Important**: Reboot after setup for all changes to take effect:
+### 3. Deploy Application
+
+Start the monitoring system (registers service and enables it to start on boot):
+
 ```bash
+./scripts/deploy.sh # uv run src/main.py in dev btw
+
+# then you should reboot to make sure everything in setup.sh is linked properly
 sudo reboot
 ```
 
-### 2. Test System
-
-After reboot, verify everything is working:
-
-```bash
-./scripts/test_camera.py
-```
-
-This comprehensive test checks:
-- System information
-- Camera hardware detection
-- Camera device permissions
-- Boot configuration
-- User permissions
-- Python camera interface
-- Macha configuration validation
-
-### 3. Run Application
-
-Start the monitoring system:
-
-```bash
-./scripts/run.sh
-```
-
-Or manually:
-```bash
-source .venv/bin/activate
-python src/main.py
-```
-
-### 4. Deploy as Service (Optional)
-
-For production deployment with automatic startup:
-
-```bash
-sudo ./scripts/deploy.sh
-```
 
 ## Scripts Directory
 
@@ -89,9 +54,6 @@ The `scripts/` directory contains all setup and management tools:
 - **`setup.sh`** - Complete system setup (run this first)
 - **`deploy.sh`** - Deploy systemd service for production
 
-### Utility Scripts  
-- **`run.sh`** - Simple application launcher
-- **`test_camera.py`** - Comprehensive system testing
 
 ## Configuration
 
@@ -192,17 +154,6 @@ macha/
 
 ## Usage
 
-### Starting the Application
-
-```bash
-# Using the run script (recommended)
-./scripts/run.sh
-
-# Or manually
-source .venv/bin/activate
-python src/main.py
-```
-
 ### Viewing Logs
 
 ```bash
@@ -218,20 +169,16 @@ journalctl -u macha -f
 ```bash
 # Service status
 systemctl status macha
-
-# Test system
-./scripts/test_camera.py
 ```
 
 ## Troubleshooting
 
 ### Camera Not Working
 
-1. **Run the test script**: `./scripts/test_camera.py`
-2. **Check hardware**: `libcamera-hello --list-cameras`  
-3. **Verify permissions**: User must be in `video` and `gpio` groups
-4. **Camera enabled**: Check `/boot/firmware/config.txt` has `camera_auto_detect=1`
-5. **Reboot required**: Many camera changes require a system reboot
+1. **Check hardware**: `libcamera-hello --list-cameras`
+2. **Verify permissions**: User must be in `video` and `gpio` groups
+3. **Camera enabled**: Check `/boot/firmware/config.txt` has `camera_auto_detect=1`
+4. **Reboot required**: Many camera changes require a system reboot
 
 ### Permission Errors
 
@@ -294,7 +241,7 @@ All task parameters must be defined as Pydantic models in `src/config.py`. This 
 Logs are written to `logs/macha.log` and console. Configure log levels in `config.yaml`:
 
 - `DEBUG`: Detailed debugging information
-- `INFO`: General operational messages  
+- `INFO`: General operational messages
 - `WARNING`: Warning conditions
 - `ERROR`: Error conditions
 - `CRITICAL`: Critical errors
@@ -307,7 +254,7 @@ Logs are written to `logs/macha.log` and console. Configure log levels in `confi
 # Start service
 sudo systemctl start macha
 
-# Stop service  
+# Stop service
 sudo systemctl stop macha
 
 # Restart service
@@ -340,23 +287,4 @@ The service runs as user `payload` and includes:
 ### Tested Cameras
 
 - **ov5647** (Original Pi Camera)
-- **imx219** (Pi Camera v2)
-- Supports up to 4 camera ports (Pi 5)
-
-### Supported Resolutions
-
-- 640x480 (VGA)
-- 1296x972 (1.3MP)  
-- 1920x1080 (FHD)
-- 2592x1944 (5MP, ov5647)
-- 3280x2464 (8MP, imx219)
-
-### Image Formats
-
-- JPEG (recommended)
-- PNG
-- BMP
-
-## License
-
-This project is provided as-is for educational and development purposes.
+- **imx219** (Pi Camera v2) - did not work

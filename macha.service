@@ -1,5 +1,5 @@
 [Unit]
-Description=Macha Camera Monitoring System
+Description=Macha
 After=multi-user.target
 Wants=multi-user.target
 

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Macha Camera Monitoring System Deployment Script
+# Macha  Deployment Script
 # Deploys the systemd service for automatic startup
 
 set -e
@@ -11,7 +11,7 @@ SYSTEMD_DIR="/etc/systemd/system"
 USER="payload"
 MACHA_DIR="/home/payload/macha"
 
-echo "Deploying Macha Camera Monitoring System Service..."
+echo "Deploying Macha  Service..."
 echo "=================================================="
 
 # Check if running as root
