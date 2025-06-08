@@ -1,5 +1,6 @@
 from task import Task
 from sqlalchemy.ext.asyncio import AsyncEngine
+from sqlalchemy import text
 import logging
 import psutil
 import platform
@@ -17,6 +18,9 @@ class MetricsTask(Task):
 
     async def execute(self, engine: AsyncEngine, logger: logging.Logger) -> dict:
         logger.info("Collecting system metrics")
+
+        # Create metrics table if it doesn't exist
+        await self._create_table(engine)
 
         metrics = {}
 
@@ -55,4 +59,68 @@ class MetricsTask(Task):
         metrics["release"] = platform.release()
 
         logger.debug(f"Collected metrics: {json.dumps(metrics, indent=2)}")
+        
+        # Store metrics in database
+        try:
+            async with engine.connect() as conn:
+                await conn.execute(
+                    text("""
+                    INSERT INTO system_metrics 
+                    (cpu_percent, cpu_count, temperature_c, storage_total_gb, storage_used_gb, 
+                     storage_free_gb, ram_total_gb, ram_used_gb, ram_free_gb, uptime_seconds,
+                     hostname, system, release, raw_data)
+                    VALUES (:cpu_percent, :cpu_count, :temperature_c, :storage_total_gb, :storage_used_gb,
+                            :storage_free_gb, :ram_total_gb, :ram_used_gb, :ram_free_gb, :uptime_seconds,
+                            :hostname, :system, :release, :raw_data)
+                    """),
+                    {
+                        "cpu_percent": metrics.get("cpu_percent"),
+                        "cpu_count": metrics.get("cpu_count"),
+                        "temperature_c": metrics.get("temperature_c"),
+                        "storage_total_gb": metrics.get("storage_total_gb"),
+                        "storage_used_gb": metrics.get("storage_used_gb"),
+                        "storage_free_gb": metrics.get("storage_free_gb"),
+                        "ram_total_gb": metrics.get("ram_total_gb"),
+                        "ram_used_gb": metrics.get("ram_used_gb"),
+                        "ram_free_gb": metrics.get("ram_free_gb"),
+                        "uptime_seconds": metrics.get("uptime_seconds"),
+                        "hostname": metrics.get("hostname"),
+                        "system": metrics.get("system"),
+                        "release": metrics.get("release"),
+                        "raw_data": json.dumps(metrics)
+                    }
+                )
+                await conn.commit()
+            
+            logger.info("Stored system metrics in database")
+        except Exception as db_error:
+            logger.error(f"Failed to store system metrics: {db_error}")
+        
         return metrics
+
+    async def _create_table(self, engine: AsyncEngine):
+        """Create the system_metrics table if it doesn't exist."""
+        async with engine.connect() as conn:
+            await conn.execute(
+                text("""
+                CREATE TABLE IF NOT EXISTS system_metrics (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    cpu_percent REAL,
+                    cpu_count INTEGER,
+                    temperature_c REAL,
+                    storage_total_gb REAL,
+                    storage_used_gb REAL,
+                    storage_free_gb REAL,
+                    ram_total_gb REAL,
+                    ram_used_gb REAL,
+                    ram_free_gb REAL,
+                    uptime_seconds REAL,
+                    hostname TEXT,
+                    system TEXT,
+                    release TEXT,
+                    raw_data TEXT
+                )
+                """)
+            )
+            await conn.commit()

@@ -132,7 +132,7 @@ All configuration is validated using Pydantic schemas:
 
 ## Database Schema
 
-### Images Table
+### Images Table (Camera Task)
 - `id`: Primary key
 - `camera_name`: Camera identifier (cam0, cam1)
 - `camera_port`: Hardware port number (0, 1)
@@ -145,13 +145,25 @@ All configuration is validated using Pydantic schemas:
 - `quality`: Compression quality (1-100)
 - `metadata`: JSON metadata including capture parameters
 
-### Tasks Table
+### System Metrics Table (Metrics Task)
+- `id`: Primary key
+- `timestamp`: Reading timestamp
+- `cpu_percent`: CPU usage percentage
+- `cpu_count`: Number of CPU cores
+- `temperature_c`: System temperature in Celsius
+- `storage_total_gb`, `storage_used_gb`, `storage_free_gb`: Storage statistics in GB
+- `ram_total_gb`, `ram_used_gb`, `ram_free_gb`: RAM statistics in GB
+- `uptime_seconds`: System uptime in seconds
+- `hostname`, `system`, `release`: System information
+- `raw_data`: Complete metrics as JSON
+
+### Tasks Table (General Task Execution)
 - `id`: Primary key
 - `task_name`: Name of executed task
 - `result`: Task execution result (JSON)
 - `timestamp`: Execution timestamp
 
-### Barometer Readings Table
+### Barometer Readings Table (BaroTask)
 - `id`: Primary key
 - `timestamp`: Reading timestamp
 - `pressure_hpa`: Atmospheric pressure in hectopascals
@@ -160,7 +172,7 @@ All configuration is validated using Pydantic schemas:
 - `sea_level_pressure`: Reference sea level pressure
 - `sensor_config`: JSON configuration used
 
-### IMU Readings Table
+### IMU Readings Table (ImuTask)
 - `id`: Primary key
 - `timestamp`: Reading timestamp
 - `accel_x`, `accel_y`, `accel_z`: Acceleration in m/s²
@@ -173,7 +185,9 @@ All configuration is validated using Pydantic schemas:
 ```
 macha/
 ├── config.yaml          # Main configuration with validation
+├── macha.db             # SQLite database with all task data
 ├── macha.service        # Systemd service file
+├── DATABASE_COMMANDS.md # SQL queries and database reference
 ├── src/
 │   ├── main.py          # Main application entry point
 │   ├── config.py        # Pydantic configuration schemas
@@ -190,6 +204,9 @@ macha/
 │   ├── deploy.sh        # Service deployment
 │   ├── run.sh           # Application launcher
 │   └── test_camera.py   # System testing
+├── tests/               # Test suite
+│   ├── test_imports.py  # Import validation tests
+│   └── test_sensor_tasks.py # Sensor task tests
 ├── images/              # Captured images
 │   ├── cam0/           # Camera 0 images
 │   └── cam1/           # Camera 1 images
@@ -214,6 +231,21 @@ journalctl -u macha -f
 # Service status
 systemctl status macha
 ```
+
+### Database Access
+
+All task data is stored in `macha.db`. Access the database using:
+
+```bash
+# SQLite CLI
+sqlite3 macha.db
+
+# Quick data checks
+sqlite3 macha.db "SELECT COUNT(*) FROM images;"
+sqlite3 macha.db "SELECT * FROM system_metrics ORDER BY timestamp DESC LIMIT 1;"
+```
+
+See `DATABASE_COMMANDS.md` for comprehensive SQL examples and queries for all tasks.
 
 ## Troubleshooting
 

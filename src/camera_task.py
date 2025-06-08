@@ -1,8 +1,10 @@
 from task import Task
 from sqlalchemy.ext.asyncio import AsyncEngine
+from sqlalchemy import text
 import logging
 import asyncio
 import os
+import json
 from datetime import datetime
 from pathlib import Path
 from config import MachaConfig, CameraParameters
@@ -27,10 +29,16 @@ class CameraTask(Task):
         self.cameras = camera_params.cameras
         self.image_format = camera_params.image_format
         self.resolution = camera_params.resolution
+        self.quality = camera_params.quality
+        self.rotation = camera_params.rotation
+        self.capture_timeout = camera_params.capture_timeout
 
     async def execute(self, engine: AsyncEngine, logger: logging.Logger) -> dict:
         """Capture images from all cameras quickly."""
         logger.info("Starting camera capture")
+
+        # Create images table if it doesn't exist
+        await self._create_table(engine)
 
         results = {"captured": 0, "failed": 0, "images": []}
 
@@ -67,12 +75,50 @@ class CameraTask(Task):
                 stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=3)
 
                 if proc.returncode == 0 and os.path.exists(filepath):
+                    file_size = os.path.getsize(filepath)
+                    resolution_str = f"{self.resolution.width}x{self.resolution.height}"
+                    
+                    # Store image metadata in database
+                    try:
+                        async with engine.connect() as conn:
+                            await conn.execute(
+                                text("""
+                                INSERT INTO images 
+                                (camera_name, camera_port, filepath, filename, file_size_bytes, 
+                                 resolution, format, quality, metadata)
+                                VALUES (:camera_name, :camera_port, :filepath, :filename, :file_size,
+                                        :resolution, :format, :quality, :metadata)
+                                """),
+                                {
+                                    "camera_name": cam.name,
+                                    "camera_port": cam.port,
+                                    "filepath": filepath,
+                                    "filename": filename,
+                                    "file_size": file_size,
+                                    "resolution": resolution_str,
+                                    "format": self.image_format,
+                                    "quality": self.quality,
+                                    "metadata": json.dumps({
+                                        "rotation": self.rotation,
+                                        "capture_timeout": self.capture_timeout,
+                                        "timestamp": timestamp.isoformat(),
+                                        "command": cmd
+                                    })
+                                }
+                            )
+                            await conn.commit()
+                        
+                        logger.info(f"Stored image metadata for {cam.name}: {filename}")
+                    except Exception as db_error:
+                        logger.error(f"Failed to store image metadata: {db_error}")
+                    
                     results["captured"] += 1
                     results["images"].append(
                         {
                             "camera": cam.name,
                             "file": filename,
-                            "size": os.path.getsize(filepath),
+                            "path": filepath,
+                            "size": file_size,
                         }
                     )
                     logger.info(f"Captured {cam.name}: {filename}")
@@ -97,3 +143,25 @@ class CameraTask(Task):
             f"Capture complete: {results['captured']} success, {results['failed']} failed"
         )
         return results
+
+    async def _create_table(self, engine: AsyncEngine):
+        """Create the images table if it doesn't exist."""
+        async with engine.connect() as conn:
+            await conn.execute(
+                text("""
+                CREATE TABLE IF NOT EXISTS images (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    camera_name TEXT NOT NULL,
+                    camera_port INTEGER NOT NULL,
+                    filepath TEXT NOT NULL,
+                    filename TEXT NOT NULL,
+                    file_size_bytes INTEGER,
+                    resolution TEXT,
+                    format TEXT,
+                    quality INTEGER,
+                    metadata TEXT
+                )
+                """)
+            )
+            await conn.commit()
