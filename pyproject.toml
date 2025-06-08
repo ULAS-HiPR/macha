@@ -11,13 +11,38 @@ dependencies = [
     "aiosqlite>=0.20.0",
     "psutil>=6.1.0",
     "pydantic>=2.0.0",
-    "picamera2>=0.3.27",
     "ruff>=0.11.13",
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.26.0",
+]
+
+[project.optional-dependencies]
+# Raspberry Pi specific dependencies
+pi-hardware = [
+    "picamera2>=0.3.27",
     "adafruit-blinka>=8.0.0",
     "adafruit-circuitpython-bmp3xx>=1.3.0",
     "adafruit-circuitpython-lsm6ds>=4.0.0",
-    "pytest>=8.0.0",
-    "pytest-asyncio>=0.26.0",
+    "RPi.GPIO>=0.7.1",
+]
+# Development and testing
+dev = [
+    "commitizen>=3.13.0",
+    "pre-commit>=3.6.0",
+    "mypy>=1.0.0",
+    "pytest-cov>=4.0.0",
+]
+# All extras combined
+all = [
+    "picamera2>=0.3.27",
+    "adafruit-blinka>=8.0.0",
+    "adafruit-circuitpython-bmp3xx>=1.3.0",
+    "adafruit-circuitpython-lsm6ds>=4.0.0",
+    "RPi.GPIO>=0.7.1",
+    "commitizen>=3.13.0",
+    "pre-commit>=3.6.0",
+    "mypy>=1.0.0",
+    "pytest-cov>=4.0.0",
 ]
 [tool.uv.pip]
 break-system-packages = true

@@ -109,23 +109,7 @@ class BaroTask(Task):
                 "altitude_meters": None
             }
 
-    async def _create_table(self, engine: AsyncEngine):
-        """Create the barometer readings table if it doesn't exist."""
-        async with engine.connect() as conn:
-            await conn.execute(
-                text("""
-                CREATE TABLE IF NOT EXISTS barometer_readings (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    pressure_hpa REAL,
-                    temperature_celsius REAL,
-                    altitude_meters REAL,
-                    sea_level_pressure REAL,
-                    sensor_config TEXT
-                )
-                """)
-            )
-            await conn.commit()
+
 
     async def execute(self, engine: AsyncEngine, logger: logging.Logger) -> dict:
         """Execute the barometer reading task."""
@@ -141,8 +125,7 @@ class BaroTask(Task):
                 "data": None
             }
         
-        # Create table if needed
-        await self._create_table(engine)
+
         
         # Read sensor data
         sensor_data = self._read_sensor_data(logger)

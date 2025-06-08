@@ -7,6 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from task import Task, TaskManager
 from metrics_task import MetricsTask
 from camera_task import CameraTask
+from baro_task import BaroTask
+from imu_task import ImuTask
 from config import MachaConfig, get_enabled_tasks
 
 
@@ -30,7 +32,12 @@ class TaskScheduler:
 
     def _initialize_tasks(self):
         """Initialize task instances based on configuration."""
-        task_classes = {"MetricsTask": MetricsTask, "CameraTask": CameraTask}
+        task_classes = {
+            "MetricsTask": MetricsTask, 
+            "CameraTask": CameraTask,
+            "BaroTask": BaroTask,
+            "ImuTask": ImuTask
+        }
 
         for task_config in self.task_configs:
             task_class_name = task_config.class_name

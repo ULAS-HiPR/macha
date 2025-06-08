@@ -19,9 +19,6 @@ class MetricsTask(Task):
     async def execute(self, engine: AsyncEngine, logger: logging.Logger) -> dict:
         logger.info("Collecting system metrics")
 
-        # Create metrics table if it doesn't exist
-        await self._create_table(engine)
-
         metrics = {}
 
         # CPU stats
@@ -98,29 +95,4 @@ class MetricsTask(Task):
         
         return metrics
 
-    async def _create_table(self, engine: AsyncEngine):
-        """Create the system_metrics table if it doesn't exist."""
-        async with engine.connect() as conn:
-            await conn.execute(
-                text("""
-                CREATE TABLE IF NOT EXISTS system_metrics (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    cpu_percent REAL,
-                    cpu_count INTEGER,
-                    temperature_c REAL,
-                    storage_total_gb REAL,
-                    storage_used_gb REAL,
-                    storage_free_gb REAL,
-                    ram_total_gb REAL,
-                    ram_used_gb REAL,
-                    ram_free_gb REAL,
-                    uptime_seconds REAL,
-                    hostname TEXT,
-                    system TEXT,
-                    release TEXT,
-                    raw_data TEXT
-                )
-                """)
-            )
-            await conn.commit()
+

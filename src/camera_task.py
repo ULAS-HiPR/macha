@@ -37,9 +37,6 @@ class CameraTask(Task):
         """Capture images from all cameras quickly."""
         logger.info("Starting camera capture")
 
-        # Create images table if it doesn't exist
-        await self._create_table(engine)
-
         results = {"captured": 0, "failed": 0, "images": []}
 
         for cam in self.cameras:
@@ -143,25 +140,3 @@ class CameraTask(Task):
             f"Capture complete: {results['captured']} success, {results['failed']} failed"
         )
         return results
-
-    async def _create_table(self, engine: AsyncEngine):
-        """Create the images table if it doesn't exist."""
-        async with engine.connect() as conn:
-            await conn.execute(
-                text("""
-                CREATE TABLE IF NOT EXISTS images (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    camera_name TEXT NOT NULL,
-                    camera_port INTEGER NOT NULL,
-                    filepath TEXT NOT NULL,
-                    filename TEXT NOT NULL,
-                    file_size_bytes INTEGER,
-                    resolution TEXT,
-                    format TEXT,
-                    quality INTEGER,
-                    metadata TEXT
-                )
-                """)
-            )
-            await conn.commit()

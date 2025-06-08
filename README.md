@@ -12,37 +12,57 @@ CanSat software to collect flight data and pictures to run in-flight on a Coral 
 
 ## Requirements
 
-- Raspberry Pi 5
+- Raspberry Pi 5 (for hardware sensors and camera)
 - Python 3.11+
-- System camera packages (python3-picamera2, libcamera-apps)
+- uv package manager
 - SQLite database support
+
+### Hardware Dependencies (Pi only)
+- I2C sensors: BMP390 (barometer), LSM6DSOX (IMU)
+- Camera module
+- System packages: libcap-dev, i2c-tools, libcamera-apps
 
 ## Quick Start
 
-### 1. Initial Setup
+### 1. Development Setup (Any System)
 
-Run the comprehensive setup script:
+For development without Pi hardware:
 
 ```bash
-./scripts/setup.sh
+# Install core dependencies
+uv sync
+
+# Run with mock hardware
+uv run src/main.py
 ```
 
-This script will:
-- Install all system dependencies (camera packages, libraries)
-- Configure camera permissions and boot settings
-- Create virtual environment with system site-packages access
-- Set up user groups (video, gpio)
-- Test camera functionality
-- Validate configuration
+### 2. Raspberry Pi Setup
+
+For full hardware support on Raspberry Pi:
+
+```bash
+# Install Pi hardware dependencies
+./scripts/install_pi_deps.sh
+
+# Reboot if prompted
+sudo reboot
+
+# Test hardware
+python3 scripts/test_hardware.py
+
+# Run with full hardware support
+uv sync --extra pi-hardware
+uv run src/main.py
+```
 
 ### 3. Deploy Application
 
 Start the monitoring system (registers service and enables it to start on boot):
 
 ```bash
-./scripts/deploy.sh # uv run src/main.py in dev btw
+./scripts/deploy.sh
 
-# then you should reboot to make sure everything in setup.sh is linked properly
+# Reboot to ensure all hardware is properly configured
 sudo reboot
 ```
 
@@ -52,8 +72,11 @@ sudo reboot
 The `scripts/` directory contains all setup and management tools:
 
 ### Setup Scripts
-- **`setup.sh`** - Complete system setup (run this first)
+- **`install_pi_deps.sh`** - Install Raspberry Pi hardware dependencies
+- **`setup.sh`** - Complete system setup (legacy)
 - **`deploy.sh`** - Deploy systemd service for production
+- **`test_hardware.py`** - Test all sensors and camera
+- **`check_db.sh`** - Database status and health check
 
 
 ## Configuration
@@ -120,6 +143,8 @@ tasks:
       gyro_range: "500DPS"  # 125DPS, 250DPS, 500DPS, 1000DPS, 2000DPS
 ```
 
+**Note**: Sensor tasks will gracefully handle missing hardware and log warnings if sensors are not available.
+
 ### Configuration Validation
 
 All configuration is validated using Pydantic schemas:
@@ -131,6 +156,8 @@ All configuration is validated using Pydantic schemas:
 - Invalid configurations are rejected with clear error messages
 
 ## Database Schema
+
+The database uses a centralized schema management system with automatic migrations. All tables are created and updated automatically when the application starts.
 
 ### Images Table (Camera Task)
 - `id`: Primary key
@@ -234,11 +261,14 @@ systemctl status macha
 
 ### Database Access
 
-All task data is stored in `macha.db`. Access the database using:
+All task data is stored in `macha.db` with automatic schema migrations. Access the database using:
 
 ```bash
 # SQLite CLI
 sqlite3 macha.db
+
+# Quick status check
+./scripts/check_db.sh
 
 # Quick data checks
 sqlite3 macha.db "SELECT COUNT(*) FROM images;"
@@ -380,13 +410,31 @@ The service runs as user `payload` and includes:
 
 ## Development
 
+### Dependencies
+
+The project uses conditional dependencies for different environments:
+
+```bash
+# Core dependencies only (CI/development)
+uv sync
+
+# With development tools
+uv sync --extra dev
+
+# With Pi hardware support
+uv sync --extra pi-hardware
+
+# Everything (Pi only)
+uv sync --extra all
+```
+
 ### Testing
 
 Run tests with pytest:
 
 ```bash
 # Install test dependencies
-uv sync --all-extras
+uv sync --extra dev
 
 # Run all tests
 uv run pytest tests/ -v
@@ -396,6 +444,9 @@ uv run pytest tests/test_sensor_tasks.py -v
 
 # Run with coverage
 uv run pytest tests/ --cov=src --cov-report=html
+
+# Test hardware (Pi only)
+python3 scripts/test_hardware.py
 ```
 
 ### Linting and Formatting
@@ -415,10 +466,12 @@ uv run ruff format --check .
 
 ### GitHub Actions
 
-The project includes CI/CD workflows:
+The project includes CI/CD workflows that work without Pi hardware:
 
-- **PR Workflow** (`.github/workflows/pr.yml`): Runs tests and linting on pull requests
+- **PR Workflow** (`.github/workflows/pr.yml`): Runs tests and linting on pull requests using core dependencies only
 - **Release Workflow** (`.github/workflows/release.yml`): Handles version bumping and changelog generation using Conventional Commits
+
+**Note**: CI workflows skip Pi-specific dependencies to avoid build issues on GitHub runners.
 
 #### Conventional Commits
 

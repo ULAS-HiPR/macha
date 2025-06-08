@@ -24,7 +24,7 @@ db:
 tasks:
     - name: metrics_collection
       class: MetricsTask
-      frequency: 1
+      frequency: 5
       enabled: true
 
     - name: camera_capture
@@ -47,7 +47,7 @@ tasks:
 
     - name: barometer_reading
       class: BaroTask
-      frequency: 30
+      frequency: 10
       enabled: true
       parameters:
           i2c_bus: 1
