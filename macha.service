@@ -1,0 +1,33 @@
+[Unit]
+Description=Macha Camera Monitoring System
+After=multi-user.target
+Wants=multi-user.target
+
+[Service]
+Type=simple
+User=payload
+Group=payload
+WorkingDirectory=/home/payload/macha
+Environment=PATH=/home/payload/macha/.venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ExecStart=/home/payload/macha/.venv/bin/python src/main.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=macha
+
+# Security settings
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=false
+ReadWritePaths=/home/payload/macha
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictRealtime=true
+
+# Allow access to video devices for cameras
+SupplementaryGroups=video gpio
+
+[Install]
+WantedBy=multi-user.target

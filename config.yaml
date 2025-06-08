@@ -1,0 +1,46 @@
+app:
+    name: macha
+    debug: true
+
+logging:
+    level: INFO
+    file:
+        path: logs/macha.log
+        format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    console:
+        format: "%(log_color)s%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        colors:
+            DEBUG: cyan
+            INFO: green
+            WARNING: yellow
+            ERROR: red
+            CRITICAL: red,bg_white
+
+db:
+    filename: macha.db
+    connection_string: sqlite+aiosqlite:///macha.db
+    overwrite: false
+
+tasks:
+    - name: metrics_collection
+      class: MetricsTask
+      frequency: 1
+      enabled: true
+
+    - name: camera_capture
+      class: CameraTask
+      frequency: 10
+      enabled: true
+      parameters:
+          cameras:
+              - port: 0
+                name: cam0
+                output_folder: images/cam0
+          image_format: jpg
+          quality: 95
+          resolution:
+              width: 1920
+              height: 1080
+          rotation: 0
+          capture_timeout: 3
+          retry_attempts: 1
