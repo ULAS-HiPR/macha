@@ -44,3 +44,22 @@ tasks:
           rotation: 0
           capture_timeout: 3
           retry_attempts: 1
+
+    - name: barometer_reading
+      class: BaroTask
+      frequency: 30
+      enabled: true
+      parameters:
+          i2c_bus: 1
+          address: 0x77
+          sea_level_pressure: 1013.25
+
+    - name: imu_reading
+      class: ImuTask
+      frequency: 10
+      enabled: true
+      parameters:
+          i2c_bus: 1
+          address: 0x6A
+          accel_range: "4G"
+          gyro_range: "500DPS"

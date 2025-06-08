@@ -6,6 +6,7 @@ CanSat software to collect flight data and pictures to run in-flight on a Coral 
 
 - **Configurable Scheduling**: Run tasks at configurable intervals with Pydantic validation
 - **System Metrics**: CPU, temperature, memory, and storage monitoring
+- **Sensor Data Collection**: Barometer (BMP390) and IMU (LSM6DSOX) data logging
 - **Schema Validation**: Pydantic-based configuration with comprehensive validation
 - **Systemd Service**: Production-ready deployment with automatic startup
 
@@ -95,6 +96,30 @@ tasks:
     enabled: true
 ```
 
+### Sensor Configuration
+
+```yaml
+tasks:
+  - name: barometer_reading
+    class: BaroTask
+    frequency: 30  # seconds
+    enabled: true
+    parameters:
+      i2c_bus: 1
+      address: 0x77  # or 0x76
+      sea_level_pressure: 1013.25
+
+  - name: imu_reading
+    class: ImuTask
+    frequency: 10  # seconds
+    enabled: true
+    parameters:
+      i2c_bus: 1
+      address: 0x6A  # or 0x6B
+      accel_range: "4G"  # 2G, 4G, 8G, 16G
+      gyro_range: "500DPS"  # 125DPS, 250DPS, 500DPS, 1000DPS, 2000DPS
+```
+
 ### Configuration Validation
 
 All configuration is validated using Pydantic schemas:
@@ -126,6 +151,23 @@ All configuration is validated using Pydantic schemas:
 - `result`: Task execution result (JSON)
 - `timestamp`: Execution timestamp
 
+### Barometer Readings Table
+- `id`: Primary key
+- `timestamp`: Reading timestamp
+- `pressure_hpa`: Atmospheric pressure in hectopascals
+- `temperature_celsius`: Temperature in Celsius
+- `altitude_meters`: Calculated altitude in meters
+- `sea_level_pressure`: Reference sea level pressure
+- `sensor_config`: JSON configuration used
+
+### IMU Readings Table
+- `id`: Primary key
+- `timestamp`: Reading timestamp
+- `accel_x`, `accel_y`, `accel_z`: Acceleration in m/s²
+- `gyro_x`, `gyro_y`, `gyro_z`: Angular velocity in rad/s
+- `temperature_celsius`: Sensor temperature in Celsius
+- `sensor_config`: JSON configuration used
+
 ## File Structure
 
 ```
@@ -138,6 +180,8 @@ macha/
 │   ├── scheduler.py     # Task scheduler
 │   ├── camera_task.py   # Camera capture implementation
 │   ├── metrics_task.py  # System metrics collection
+│   ├── baro_task.py     # Barometer sensor task (BMP390)
+│   ├── imu_task.py      # IMU sensor task (LSM6DSOX)
 │   ├── task.py          # Base task classes
 │   ├── logger.py        # Logging setup
 │   └── database.py      # Database initialization
@@ -288,3 +332,101 @@ The service runs as user `payload` and includes:
 
 - **ov5647** (Original Pi Camera)
 - **imx219** (Pi Camera v2) - did not work
+
+### Supported Sensors
+
+- **BMP390** - Barometer (pressure, temperature, altitude)
+  - I2C addresses: 0x77 (default), 0x76
+  - Measures atmospheric pressure, temperature
+  - Calculates altitude based on sea level pressure reference
+  
+- **LSM6DSOX** - 6-axis IMU (accelerometer + gyroscope)
+  - I2C addresses: 0x6A (default), 0x6B
+  - 3-axis accelerometer: ±2g, ±4g, ±8g, ±16g ranges
+  - 3-axis gyroscope: ±125, ±250, ±500, ±1000, ±2000 dps ranges
+  - Built-in temperature sensor
+
+## Development
+
+### Testing
+
+Run tests with pytest:
+
+```bash
+# Install test dependencies
+uv sync --all-extras
+
+# Run all tests
+uv run pytest tests/ -v
+
+# Run specific test file
+uv run pytest tests/test_sensor_tasks.py -v
+
+# Run with coverage
+uv run pytest tests/ --cov=src --cov-report=html
+```
+
+### Linting and Formatting
+
+The project uses ruff for linting and formatting:
+
+```bash
+# Check code style
+uv run ruff check .
+
+# Format code
+uv run ruff format .
+
+# Check formatting without applying
+uv run ruff format --check .
+```
+
+### GitHub Actions
+
+The project includes CI/CD workflows:
+
+- **PR Workflow** (`.github/workflows/pr.yml`): Runs tests and linting on pull requests
+- **Release Workflow** (`.github/workflows/release.yml`): Handles version bumping and changelog generation using Conventional Commits
+
+#### Conventional Commits
+
+This project follows [Conventional Commits](https://www.conventionalcommits.org/) for semantic versioning:
+
+```bash
+feat: add new sensor support
+fix: resolve I2C communication issue
+docs: update sensor configuration examples
+test: add sensor task unit tests
+```
+
+### Sensor Development
+
+When adding new sensor tasks:
+
+1. Create sensor task class inheriting from `Task`
+2. Add parameter schema in `config.py`
+3. Update task validation in `MachaConfig.validate_tasks()`
+4. Add configuration example to `config.yaml`
+5. Create unit tests in `tests/`
+6. Update documentation
+
+Example sensor task structure:
+
+```python
+from task import Task
+from config import MachaConfig
+
+class MySensorTask(Task):
+    def __init__(self, config: MachaConfig):
+        super().__init__(config)
+        self.sensor = None
+        self.parameters = None  # Extract from config
+    
+    async def _initialize_sensor(self, logger):
+        # Initialize sensor hardware
+        pass
+    
+    async def execute(self, engine, logger):
+        # Read sensor, store in database
+        pass
+```
