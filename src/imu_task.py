@@ -12,9 +12,17 @@ try:
     import board
     import busio
     import adafruit_lsm6ds
+    from adafruit_lsm6ds.lsm6dsox import LSM6DSOX
+    from adafruit_lsm6ds.lsm6ds33 import LSM6DS33
+    from adafruit_lsm6ds.lsm6dso32 import LSM6DSO32
+    from adafruit_lsm6ds.lsm6ds3trc import LSM6DS3TRC
     SENSOR_AVAILABLE = True
 except ImportError as e:
     SENSOR_AVAILABLE = False
+    LSM6DSOX = None
+    LSM6DS33 = None
+    LSM6DSO32 = None
+    LSM6DS3TRC = None
 
 
 class ImuTask(Task):
@@ -54,34 +62,64 @@ class ImuTask(Task):
                 logger.error(f"I2C bus {self.parameters.i2c_bus} not supported. Only bus 1 is currently supported.")
                 return False
             
-            # Initialize the sensor
-            self.sensor = adafruit_lsm6ds.LSM6DSOX(self.i2c, address=self.parameters.address)
+            # Initialize the sensor - try different LSM6DS variants
+            sensor_classes = [
+                LSM6DSOX,
+                LSM6DS33,
+                LSM6DS3TRC,
+                LSM6DSO32,
+            ]
             
-            # Configure accelerometer range
-            if self.parameters.accel_range == "2G":
-                self.sensor.accelerometer_range = adafruit_lsm6ds.Range.RANGE_2G
-            elif self.parameters.accel_range == "4G":
-                self.sensor.accelerometer_range = adafruit_lsm6ds.Range.RANGE_4G
-            elif self.parameters.accel_range == "8G":
-                self.sensor.accelerometer_range = adafruit_lsm6ds.Range.RANGE_8G
-            elif self.parameters.accel_range == "16G":
-                self.sensor.accelerometer_range = adafruit_lsm6ds.Range.RANGE_16G
+            self.sensor = None
+            last_error = None
             
-            # Configure gyroscope range
-            if self.parameters.gyro_range == "125DPS":
-                self.sensor.gyro_range = adafruit_lsm6ds.GyroRange.RANGE_125_DPS
-            elif self.parameters.gyro_range == "250DPS":
-                self.sensor.gyro_range = adafruit_lsm6ds.GyroRange.RANGE_250_DPS
-            elif self.parameters.gyro_range == "500DPS":
-                self.sensor.gyro_range = adafruit_lsm6ds.GyroRange.RANGE_500_DPS
-            elif self.parameters.gyro_range == "1000DPS":
-                self.sensor.gyro_range = adafruit_lsm6ds.GyroRange.RANGE_1000_DPS
-            elif self.parameters.gyro_range == "2000DPS":
-                self.sensor.gyro_range = adafruit_lsm6ds.GyroRange.RANGE_2000_DPS
+            for sensor_class in sensor_classes:
+                if sensor_class is None:
+                    continue
+                try:
+                    self.sensor = sensor_class(self.i2c, address=self.parameters.address)
+                    logger.info(f"Successfully initialized {sensor_class.__name__}")
+                    break
+                except Exception as e:
+                    last_error = e
+                    continue
             
-            # Set data rates to 104 Hz for both sensors
-            self.sensor.accelerometer_data_rate = adafruit_lsm6ds.Rate.RATE_104_HZ
-            self.sensor.gyro_data_rate = adafruit_lsm6ds.Rate.RATE_104_HZ
+            if self.sensor is None:
+                raise Exception(f"No compatible LSM6DS sensor found. Last error: {last_error}")
+            
+            # Configure sensor settings with error handling
+            try:
+                # Configure accelerometer range
+                if hasattr(adafruit_lsm6ds, 'Range'):
+                    if self.parameters.accel_range == "2G":
+                        self.sensor.accelerometer_range = adafruit_lsm6ds.Range.RANGE_2G
+                    elif self.parameters.accel_range == "4G":
+                        self.sensor.accelerometer_range = adafruit_lsm6ds.Range.RANGE_4G
+                    elif self.parameters.accel_range == "8G":
+                        self.sensor.accelerometer_range = adafruit_lsm6ds.Range.RANGE_8G
+                    elif self.parameters.accel_range == "16G":
+                        self.sensor.accelerometer_range = adafruit_lsm6ds.Range.RANGE_16G
+                
+                # Configure gyroscope range
+                if hasattr(adafruit_lsm6ds, 'GyroRange'):
+                    if self.parameters.gyro_range == "125DPS":
+                        self.sensor.gyro_range = adafruit_lsm6ds.GyroRange.RANGE_125_DPS
+                    elif self.parameters.gyro_range == "250DPS":
+                        self.sensor.gyro_range = adafruit_lsm6ds.GyroRange.RANGE_250_DPS
+                    elif self.parameters.gyro_range == "500DPS":
+                        self.sensor.gyro_range = adafruit_lsm6ds.GyroRange.RANGE_500_DPS
+                    elif self.parameters.gyro_range == "1000DPS":
+                        self.sensor.gyro_range = adafruit_lsm6ds.GyroRange.RANGE_1000_DPS
+                    elif self.parameters.gyro_range == "2000DPS":
+                        self.sensor.gyro_range = adafruit_lsm6ds.GyroRange.RANGE_2000_DPS
+                
+                # Set data rates to 104 Hz for both sensors
+                if hasattr(adafruit_lsm6ds, 'Rate'):
+                    self.sensor.accelerometer_data_rate = adafruit_lsm6ds.Rate.RATE_104_HZ
+                    self.sensor.gyro_data_rate = adafruit_lsm6ds.Rate.RATE_104_HZ
+                    
+            except Exception as config_error:
+                logger.warning(f"Could not configure sensor ranges: {config_error}. Using defaults.")
             
             self.initialized = True
             logger.info(f"LSM6DSOX IMU sensor initialized on I2C bus {self.parameters.i2c_bus}, address 0x{self.parameters.address:02X}")
@@ -89,7 +127,13 @@ class ImuTask(Task):
             return True
             
         except Exception as e:
-            logger.error(f"Failed to initialize LSM6DSOX sensor: {e}")
+            if "No such file or directory" in str(e) or "Remote I/O error" in str(e):
+                logger.error(f"Failed to initialize IMU sensor: I2C communication error. Check if sensor is connected at address 0x{self.parameters.address:02X}")
+            elif "No compatible LSM6DS sensor found" in str(e):
+                logger.error(f"Failed to initialize IMU sensor: {e}")
+                logger.info("This error may occur if no physical IMU sensor is connected to the I2C bus")
+            else:
+                logger.error(f"Failed to initialize IMU sensor: {e}")
             self.initialized = False
             return False
 
