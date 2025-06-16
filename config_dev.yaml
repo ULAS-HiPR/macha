@@ -1,0 +1,84 @@
+app:
+    name: macha-dev
+    debug: true
+
+logging:
+    level: DEBUG
+    file:
+        path: logs/macha_dev.log
+        format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    console:
+        format: "%(log_color)s%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        colors:
+            DEBUG: cyan
+            INFO: green
+            WARNING: yellow
+            ERROR: red
+            CRITICAL: red,bg_white
+
+db:
+    filename: macha_dev.db
+    connection_string: sqlite+aiosqlite:///macha_dev.db
+    overwrite: false
+
+tasks:
+    - name: metrics_collection
+      class: MetricsTask
+      frequency: 10
+      enabled: true
+
+    - name: mock_camera_capture
+      class: MockCameraTask  # Using mock camera for development
+      frequency: 15
+      enabled: true
+      parameters:
+          cameras:
+              - port: 0  # MacBook built-in camera (if using OpenCV)
+                name: mock_cam0
+                output_folder: dev_images/cam0
+              - port: 1  # Mock second camera
+                name: mock_cam1
+                output_folder: dev_images/cam1
+          image_format: jpg
+          quality: 85
+          resolution:
+              width: 1280
+              height: 720
+          rotation: 0
+          capture_timeout: 5
+          retry_attempts: 2
+
+    # Disable hardware sensors for development
+    - name: barometer_reading
+      class: BaroTask
+      frequency: 30
+      enabled: false  # Disabled for MacBook development
+      parameters:
+          i2c_bus: 1
+          address: 0x77
+          sea_level_pressure: 1013.25
+
+    - name: imu_reading
+      class: ImuTask
+      frequency: 30
+      enabled: false  # Disabled for MacBook development
+      parameters:
+          i2c_bus: 1
+          address: 0x6A
+          accel_range: "4G"
+          gyro_range: "500DPS"
+
+    - name: ai_segmentation
+      class: AiTask
+      frequency: 30  # Must be >= camera frequency (15s) and divisible
+      enabled: false  # Disabled by default until model is available
+      parameters:
+          model_path: models/landing_segmentation_dev.tflite
+          model_name: landing_segmentation_dev
+          model_version: "1.0.0"
+          use_coral_tpu: false  # Disabled for MacBook development
+          output_folder: dev_segmentation_outputs
+          confidence_threshold: 0.5
+          max_queue_size: 20
+          processing_timeout: 10
+          max_retries: 1 

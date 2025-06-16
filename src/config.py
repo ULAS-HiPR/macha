@@ -204,7 +204,7 @@ class TaskConfig(BaseModel):
         data = info.data if hasattr(info, "data") else {}
         class_name = data.get("class")
 
-        if class_name == "CameraTask":
+        if class_name in ["CameraTask", "MockCameraTask"]:
             if isinstance(v, dict):
                 return CameraParameters(**v)
             return v
@@ -250,11 +250,11 @@ class MachaConfig(BaseModel):
 
     @model_validator(mode="after")
     def validate_tasks(self):
-        camera_tasks = [t for t in self.tasks if t.class_name == "CameraTask"]
+        camera_tasks = [t for t in self.tasks if t.class_name in ["CameraTask", "MockCameraTask"]] 
         baro_tasks = [t for t in self.tasks if t.class_name == "BaroTask"]
         imu_tasks = [t for t in self.tasks if t.class_name == "ImuTask"]
         
-        # Validate camera tasks
+        # Validate camera tasks (including mock cameras)
         for task in camera_tasks:
             if task.parameters is None:
                 raise ValueError(f"{task.class_name} '{task.name}' requires parameters")

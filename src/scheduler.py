@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from task import Task, TaskManager
 from metrics_task import MetricsTask
 from camera_task import CameraTask
+from mock_camera_task import MockCameraTask
 from baro_task import BaroTask
 from imu_task import ImuTask
 from ai_task import AiTask
@@ -36,6 +37,7 @@ class TaskScheduler:
         task_classes = {
             "MetricsTask": MetricsTask, 
             "CameraTask": CameraTask,
+            "MockCameraTask": MockCameraTask,
             "BaroTask": BaroTask,
             "ImuTask": ImuTask,
             "AiTask": AiTask
