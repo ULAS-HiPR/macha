@@ -251,12 +251,45 @@ class MachaConfig(BaseModel):
     @model_validator(mode="after")
     def validate_tasks(self):
         camera_tasks = [t for t in self.tasks if t.class_name == "CameraTask"]
+        baro_tasks = [t for t in self.tasks if t.class_name == "BaroTask"]
+        imu_tasks = [t for t in self.tasks if t.class_name == "ImuTask"]
         
-        # Existing camera validation
-        for camera_task in camera_tasks:
-            if camera_task.parameters and isinstance(camera_task.parameters, CameraParameters):
-                # Additional camera-specific validation can go here
-                pass
+        # Validate camera tasks
+        for task in camera_tasks:
+            if task.parameters is None:
+                raise ValueError(f"{task.class_name} '{task.name}' requires parameters")
+            if not isinstance(task.parameters, CameraParameters):
+                raise ValueError(
+                    f"{task.class_name} '{task.name}' has invalid parameters"
+                )
+
+            # Only create directories for enabled camera tasks
+            if task.enabled:
+                for camera in task.parameters.cameras:
+                    try:
+                        Path(camera.output_folder).mkdir(parents=True, exist_ok=True)
+                    except Exception as e:
+                        raise ValueError(
+                            f"Cannot create directory '{camera.output_folder}' for camera '{camera.name}': {e}"
+                        )
+
+        # Validate barometer tasks
+        for task in baro_tasks:
+            if task.parameters is None:
+                raise ValueError(f"{task.class_name} '{task.name}' requires parameters")
+            if not isinstance(task.parameters, BarometerParameters):
+                raise ValueError(
+                    f"{task.class_name} '{task.name}' has invalid parameters"
+                )
+
+        # Validate IMU tasks
+        for task in imu_tasks:
+            if task.parameters is None:
+                raise ValueError(f"{task.class_name} '{task.name}' requires parameters")
+            if not isinstance(task.parameters, ImuParameters):
+                raise ValueError(
+                    f"{task.class_name} '{task.name}' has invalid parameters"
+                )
         
         # AI task frequency validation
         ai_tasks = [t for t in self.tasks if t.class_name == "AiTask" and t.enabled]
