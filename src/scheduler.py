@@ -9,6 +9,7 @@ from metrics_task import MetricsTask
 from camera_task import CameraTask
 from baro_task import BaroTask
 from imu_task import ImuTask
+from ai_task import AiTask
 from config import MachaConfig, get_enabled_tasks
 
 
@@ -36,7 +37,8 @@ class TaskScheduler:
             "MetricsTask": MetricsTask, 
             "CameraTask": CameraTask,
             "BaroTask": BaroTask,
-            "ImuTask": ImuTask
+            "ImuTask": ImuTask,
+            "AiTask": AiTask
         }
 
         for task_config in self.task_configs:

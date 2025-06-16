@@ -30,6 +30,7 @@ class DatabaseManager:
             (2, self._create_camera_tables),
             (3, self._create_metrics_tables),
             (4, self._create_sensor_tables),
+            (5, self._create_ai_tables),
         ]
         
         for version, migration_func in migrations:
@@ -177,6 +178,69 @@ class DatabaseManager:
                 )
                 """)
             )
+            await conn.commit()
+
+    async def _create_ai_tables(self):
+        """Migration 5: Create AI inference tables."""
+        async with self.engine.connect() as conn:
+            # AI models table
+            await conn.execute(
+                text("""
+                CREATE TABLE IF NOT EXISTS ai_models (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL UNIQUE,
+                    version TEXT NOT NULL,
+                    filepath TEXT NOT NULL,
+                    model_type TEXT NOT NULL,
+                    input_height INTEGER NOT NULL,
+                    input_width INTEGER NOT NULL,
+                    input_channels INTEGER NOT NULL,
+                    output_classes TEXT NOT NULL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    is_active BOOLEAN DEFAULT 0,
+                    metadata TEXT
+                )
+                """)
+            )
+            
+            # Segmentation results table
+            await conn.execute(
+                text("""
+                CREATE TABLE IF NOT EXISTS segmentation_results (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    source_image_id INTEGER NOT NULL,
+                    ai_model_id INTEGER NOT NULL,
+                    output_filepath TEXT NOT NULL,
+                    output_filename TEXT NOT NULL,
+                    file_size_bytes INTEGER,
+                    resolution TEXT,
+                    format TEXT,
+                    processing_time_ms INTEGER,
+                    confidence_scores TEXT,
+                    metadata TEXT,
+                    FOREIGN KEY (source_image_id) REFERENCES images (id),
+                    FOREIGN KEY (ai_model_id) REFERENCES ai_models (id)
+                )
+                """)
+            )
+            
+            # Processing queue table
+            await conn.execute(
+                text("""
+                CREATE TABLE IF NOT EXISTS ai_processing_queue (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    image_id INTEGER NOT NULL,
+                    status TEXT NOT NULL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    processed_at DATETIME,
+                    attempts INTEGER DEFAULT 0,
+                    error_message TEXT,
+                    FOREIGN KEY (image_id) REFERENCES images (id)
+                )
+                """)
+            )
+            
             await conn.commit()
 
 

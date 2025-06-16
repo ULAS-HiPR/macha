@@ -145,6 +145,35 @@ tasks:
 
 **Note**: Sensor tasks will gracefully handle missing hardware and log warnings if sensors are not available.
 
+### AI Segmentation Configuration
+
+```yaml
+tasks:
+  - name: ai_segmentation
+    class: AiTask
+    frequency: 20  # seconds (must be >= camera frequency and divisible)
+    enabled: true
+    parameters:
+      model_path: models/landing_segmentation_edgetpu.tflite
+      model_name: landing_segmentation_v1
+      model_version: "1.0.0"
+      use_coral_tpu: true
+      output_folder: segmentation_outputs
+      confidence_threshold: 0.6
+      max_queue_size: 30
+      processing_timeout: 8
+      max_retries: 2
+      output_format: png
+      save_confidence_overlay: true
+      class_names: ["background", "safe_landing", "unsafe_landing"]
+      class_colors:
+        background: [0, 0, 0]
+        safe_landing: [0, 255, 0]
+        unsafe_landing: [255, 0, 0]
+```
+
+**Note**: AI task processes captured images to generate segmentation masks for landing safety analysis. Requires TensorFlow Lite models optimized for Coral TPU.
+
 ### Configuration Validation
 
 All configuration is validated using Pydantic schemas:

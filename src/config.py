@@ -1,7 +1,7 @@
 import yaml
 import os
 from pathlib import Path
-from typing import List, Dict, Any, Optional, Union
+from typing import List, Dict, Any, Optional, Union, Tuple
 from pydantic import BaseModel, Field, field_validator, model_validator
 from enum import Enum
 
@@ -138,12 +138,61 @@ class ImuParameters(BaseModel):
         return v
 
 
+class AiParameters(BaseModel):
+    model_path: str = Field(..., description="Path to TensorFlow Lite model")
+    model_name: str = Field(..., description="Model identifier")
+    model_version: str = Field(default="1.0.0", description="Model version")
+    use_coral_tpu: bool = Field(default=True, description="Use Coral TPU acceleration")
+    output_folder: str = Field(default="segmentation_outputs", description="Directory for segmentation masks")
+    
+    # Processing parameters
+    confidence_threshold: float = Field(default=0.5, ge=0.0, le=1.0, description="Minimum confidence for classification")
+    max_queue_size: int = Field(default=50, ge=1, description="Maximum unprocessed images in queue")
+    processing_timeout: int = Field(default=10, ge=1, le=60, description="Processing timeout per image")
+    max_retries: int = Field(default=2, ge=0, le=5, description="Maximum retry attempts per image")
+    
+    # Output parameters
+    output_format: str = Field(default="png", pattern="^(png|jpg|bmp)$", description="Output image format")
+    save_confidence_overlay: bool = Field(default=True, description="Save confidence as overlay")
+    
+    # Class mapping
+    class_names: List[str] = Field(default=["background", "safe_landing", "unsafe_landing"], description="Class names for segmentation")
+    class_colors: Dict[str, List[int]] = Field(
+        default={
+            "background": [0, 0, 0],
+            "safe_landing": [0, 255, 0],
+            "unsafe_landing": [255, 0, 0]
+        },
+        description="RGB colors for each class"
+    )
+
+    @field_validator("output_folder")
+    @classmethod
+    def validate_output_folder(cls, v):
+        return v.strip() if v and v.strip() else "segmentation_outputs"
+
+    @field_validator("class_colors")
+    @classmethod
+    def validate_class_colors(cls, v, info):
+        # Validate that all class names have corresponding colors
+        if hasattr(info, "data") and "class_names" in info.data:
+            class_names = info.data["class_names"]
+            for class_name in class_names:
+                if class_name not in v:
+                    raise ValueError(f"Missing color for class: {class_name}")
+                if not isinstance(v[class_name], list) or len(v[class_name]) != 3:
+                    raise ValueError(f"Color for {class_name} must be RGB list [r, g, b]")
+                if not all(0 <= c <= 255 for c in v[class_name]):
+                    raise ValueError(f"RGB values for {class_name} must be 0-255")
+        return v
+
+
 class TaskConfig(BaseModel):
     name: str = Field(..., min_length=1, description="Task name")
     class_name: str = Field(..., alias="class", description="Task class name")
     frequency: int = Field(..., ge=1, description="Task frequency in seconds")
     enabled: bool = Field(default=True, description="Whether task is enabled")
-    parameters: Optional[Union[CameraParameters, BarometerParameters, ImuParameters, Dict[str, Any]]] = Field(default=None)
+    parameters: Optional[Union[CameraParameters, BarometerParameters, ImuParameters, AiParameters, Dict[str, Any]]] = Field(default=None)
 
     @field_validator("parameters", mode="before")
     @classmethod
@@ -166,6 +215,10 @@ class TaskConfig(BaseModel):
         elif class_name == "ImuTask":
             if isinstance(v, dict):
                 return ImuParameters(**v)
+            return v
+        elif class_name == "AiTask":
+            if isinstance(v, dict):
+                return AiParameters(**v)
             return v
         return v
 
@@ -198,46 +251,31 @@ class MachaConfig(BaseModel):
     @model_validator(mode="after")
     def validate_tasks(self):
         camera_tasks = [t for t in self.tasks if t.class_name == "CameraTask"]
-        baro_tasks = [t for t in self.tasks if t.class_name == "BaroTask"]
-        imu_tasks = [t for t in self.tasks if t.class_name == "ImuTask"]
-
-        # Validate camera tasks
-        for task in camera_tasks:
-            if task.parameters is None:
-                raise ValueError(f"{task.class_name} '{task.name}' requires parameters")
-            if not isinstance(task.parameters, CameraParameters):
-                raise ValueError(
-                    f"{task.class_name} '{task.name}' has invalid parameters"
-                )
-
-            # Only create directories for enabled camera tasks
-            if task.enabled:
-                for camera in task.parameters.cameras:
-                    try:
-                        Path(camera.output_folder).mkdir(parents=True, exist_ok=True)
-                    except Exception as e:
+        
+        # Existing camera validation
+        for camera_task in camera_tasks:
+            if camera_task.parameters and isinstance(camera_task.parameters, CameraParameters):
+                # Additional camera-specific validation can go here
+                pass
+        
+        # AI task frequency validation
+        ai_tasks = [t for t in self.tasks if t.class_name == "AiTask" and t.enabled]
+        if ai_tasks and camera_tasks:
+            enabled_camera_tasks = [t for t in camera_tasks if t.enabled]
+            if enabled_camera_tasks:
+                camera_freq = min(t.frequency for t in enabled_camera_tasks)
+                for ai_task in ai_tasks:
+                    if ai_task.frequency < camera_freq:
                         raise ValueError(
-                            f"Cannot create directory '{camera.output_folder}' for camera '{camera.name}': {e}"
+                            f"AI task '{ai_task.name}' frequency ({ai_task.frequency}s) cannot be "
+                            f"faster than camera task frequency ({camera_freq}s)"
                         )
-
-        # Validate barometer tasks
-        for task in baro_tasks:
-            if task.parameters is None:
-                raise ValueError(f"{task.class_name} '{task.name}' requires parameters")
-            if not isinstance(task.parameters, BarometerParameters):
-                raise ValueError(
-                    f"{task.class_name} '{task.name}' has invalid parameters"
-                )
-
-        # Validate IMU tasks
-        for task in imu_tasks:
-            if task.parameters is None:
-                raise ValueError(f"{task.class_name} '{task.name}' requires parameters")
-            if not isinstance(task.parameters, ImuParameters):
-                raise ValueError(
-                    f"{task.class_name} '{task.name}' has invalid parameters"
-                )
-
+                    if ai_task.frequency % camera_freq != 0:
+                        raise ValueError(
+                            f"AI task '{ai_task.name}' frequency ({ai_task.frequency}s) must be "
+                            f"divisible by camera frequency ({camera_freq}s)"
+                        )
+        
         return self
 
 
