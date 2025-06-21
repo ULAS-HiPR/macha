@@ -69,9 +69,9 @@ tasks:
           gyro_range: "500DPS"
 
     - name: ai_segmentation
-      class: AiTask
+      class: MockAiTask
       frequency: 30 # Must be >= camera frequency (15s) and divisible
-      enabled: true # Enabled for development testing
+      enabled: true # Enabled for development testing with mock AI
       parameters:
           model_path: models/landing_segmentation_dev.tflite
           model_name: landing_segmentation_dev

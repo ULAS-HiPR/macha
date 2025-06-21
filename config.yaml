@@ -65,9 +65,9 @@ tasks:
           gyro_range: "500DPS"
 
     - name: ai_segmentation
-      class: AiTask
+      class: MockAiTask
       frequency: 10 # Must be >= camera frequency (10s) and divisible
-      enabled: true # Enabled for Pi deployment
+      enabled: true # Enabled for Pi deployment with mock AI
       parameters:
           model_path: models/landing_segmentation_edgetpu.tflite
           model_name: landing_segmentation_v1

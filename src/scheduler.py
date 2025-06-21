@@ -14,6 +14,7 @@ from ai_task import AiTask
 from mock_baro_task import MockBaroTask
 from mock_imu_task import MockImuTask
 from mock_metrics_task import MockMetricsTask
+from mock_ai_task import MockAiTask
 from config import MachaConfig, get_enabled_tasks
 
 
@@ -44,6 +45,7 @@ class TaskScheduler:
             "BaroTask": BaroTask,
             "ImuTask": ImuTask,
             "AiTask": AiTask,
+            "MockAiTask": MockAiTask,
             "MockBaroTask": MockBaroTask,
             "MockImuTask": MockImuTask,
             "MockMetricsTask": MockMetricsTask
