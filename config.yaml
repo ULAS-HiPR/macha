@@ -29,7 +29,7 @@ tasks:
 
     - name: camera_capture
       class: CameraTask
-      frequency: 10
+      frequency: 5
       enabled: true
       parameters:
           cameras:
@@ -47,7 +47,7 @@ tasks:
 
     - name: barometer_reading
       class: BaroTask
-      frequency: 10
+      frequency: 1
       enabled: true
       parameters:
           i2c_bus: 1
@@ -56,7 +56,7 @@ tasks:
 
     - name: imu_reading
       class: ImuTask
-      frequency: 10
+      frequency: 1
       enabled: true
       parameters:
           i2c_bus: 1
