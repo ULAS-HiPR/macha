@@ -18,14 +18,14 @@ from imu_task import ImuTask
 def mock_engine():
     """Create a mock database engine."""
     engine = Mock(spec=AsyncEngine)
-    
+
     # Mock connection and execute methods
     mock_conn = AsyncMock()
     mock_conn.execute = AsyncMock()
     mock_conn.commit = AsyncMock()
     mock_conn.__aenter__ = AsyncMock(return_value=mock_conn)
     mock_conn.__aexit__ = AsyncMock(return_value=None)
-    
+
     engine.connect.return_value = mock_conn
     return engine
 
@@ -130,9 +130,21 @@ class TestBaroTask:
                 "connection_string": "sqlite:///test.db",
                 "overwrite": False
             },
-            tasks=[]
+            tasks=[
+                {
+                    "name": "dummy_task",
+                    "class": "BaroTask",
+                    "frequency": 60,
+                    "enabled": True,
+                    "parameters": {
+                        "i2c_bus": 1,
+                        "address": 0x77,
+                        "sea_level_pressure": 1013.25
+                    }
+                }
+            ]
         )
-        
+
         task = BaroTask(config)
         assert isinstance(task.parameters, BarometerParameters)
         assert task.parameters.i2c_bus == 1
@@ -144,7 +156,7 @@ class TestBaroTask:
         """Test BaroTask when sensor libraries are not available."""
         task = BaroTask(baro_config)
         result = await task.execute(mock_engine, mock_logger)
-        
+
         assert result["success"] is False
         assert "Failed to initialize barometer sensor" in result["error"]
         mock_logger.error.assert_called()
@@ -159,15 +171,15 @@ class TestBaroTask:
         # Mock sensor initialization
         mock_i2c = Mock()
         mock_busio.I2C.return_value = mock_i2c
-        
+
         mock_sensor = Mock()
         mock_sensor.pressure = 1013.25
         mock_sensor.temperature = 25.5
         mock_bmp3xx.BMP3XX_I2C.return_value = mock_sensor
-        
+
         task = BaroTask(baro_config)
         result = await task.execute(mock_engine, mock_logger)
-        
+
         assert result["success"] is True
         assert result["error"] is None
         assert result["data"]["pressure_hpa"] == 1013.25
@@ -184,15 +196,15 @@ class TestBaroTask:
         # Mock sensor initialization
         mock_i2c = Mock()
         mock_busio.I2C.return_value = mock_i2c
-        
+
         mock_sensor = Mock()
         mock_sensor.pressure = None
         mock_sensor.temperature = None
         mock_bmp3xx.BMP3XX_I2C.return_value = mock_sensor
-        
+
         task = BaroTask(baro_config)
         result = await task.execute(mock_engine, mock_logger)
-        
+
         assert result["success"] is False
         assert "Failed to read valid data from barometer sensor" in result["error"]
 
@@ -224,9 +236,22 @@ class TestImuTask:
                 "connection_string": "sqlite:///test.db",
                 "overwrite": False
             },
-            tasks=[]
+            tasks=[
+                {
+                    "name": "dummy_task",
+                    "class": "ImuTask",
+                    "frequency": 60,
+                    "enabled": True,
+                    "parameters": {
+                        "i2c_bus": 1,
+                        "address": 0x6A,
+                        "accel_range": "4G",
+                        "gyro_range": "500DPS"
+                    }
+                }
+            ]
         )
-        
+
         task = ImuTask(config)
         assert isinstance(task.parameters, ImuParameters)
         assert task.parameters.i2c_bus == 1
@@ -238,7 +263,7 @@ class TestImuTask:
         """Test ImuTask when sensor libraries are not available."""
         task = ImuTask(imu_config)
         result = await task.execute(mock_engine, mock_logger)
-        
+
         assert result["success"] is False
         assert "Failed to initialize IMU sensor" in result["error"]
         mock_logger.error.assert_called()
@@ -247,27 +272,47 @@ class TestImuTask:
     @patch('imu_task.busio')
     @patch('imu_task.board')
     @patch('imu_task.adafruit_lsm6ds')
+    @patch('imu_task.LSM6DSOX')
+    @patch('imu_task.LSM6DS33')
+    @patch('imu_task.LSM6DSO32')
+    @patch('imu_task.LSM6DS3TRC')
     @pytest.mark.asyncio
-    async def test_imu_task_successful_execution(self, mock_lsm6ds, mock_board, mock_busio, imu_config, mock_engine, mock_logger):
+    async def test_imu_task_successful_execution(self, mock_lsm6ds3trc, mock_lsm6dso32, mock_lsm6ds33, mock_lsm6dsox, mock_lsm6ds, mock_board, mock_busio, imu_config, mock_engine, mock_logger):
         """Test successful IMU task execution."""
         # Mock sensor initialization
         mock_i2c = Mock()
         mock_busio.I2C.return_value = mock_i2c
-        
+
         mock_sensor = Mock()
         mock_sensor.acceleration = (0.1, 0.2, 9.8)
         mock_sensor.gyro = (0.01, 0.02, 0.03)
         mock_sensor.temperature = 26.5
-        mock_lsm6ds.LSM6DSOX.return_value = mock_sensor
-        
-        # Mock range constants
+
+        # Add configuration attributes that ImuTask tries to set during initialization
+        mock_sensor.accelerometer_range = None
+        mock_sensor.gyro_range = None
+        mock_sensor.accelerometer_data_rate = None
+        mock_sensor.gyro_data_rate = None
+
+        # Mock the LSM6DSOX constructor to return our mock sensor
+        mock_lsm6dsox.return_value = mock_sensor
+
+        # Make other sensor classes fail so only LSM6DSOX succeeds
+        mock_lsm6ds33.side_effect = Exception("Sensor not found")
+        mock_lsm6ds3trc.side_effect = Exception("Sensor not found")
+        mock_lsm6dso32.side_effect = Exception("Sensor not found")
+
+        # Mock range constants - make attributes available
+        mock_lsm6ds.Range = Mock()
         mock_lsm6ds.Range.RANGE_4G = "4G"
+        mock_lsm6ds.GyroRange = Mock()
         mock_lsm6ds.GyroRange.RANGE_500_DPS = "500DPS"
+        mock_lsm6ds.Rate = Mock()
         mock_lsm6ds.Rate.RATE_104_HZ = "104HZ"
-        
+
         task = ImuTask(imu_config)
         result = await task.execute(mock_engine, mock_logger)
-        
+
         assert result["success"] is True
         assert result["error"] is None
         assert result["data"]["accel_x"] == 0.1
@@ -277,32 +322,40 @@ class TestImuTask:
         assert result["data"]["gyro_y"] == 0.02
         assert result["data"]["gyro_z"] == 0.03
         assert result["data"]["temperature_celsius"] == 26.5
-
     @patch('imu_task.SENSOR_AVAILABLE', True)
     @patch('imu_task.busio')
     @patch('imu_task.board')
     @patch('imu_task.adafruit_lsm6ds')
+    @patch('imu_task.LSM6DSOX')
+    @patch('imu_task.LSM6DS33')
+    @patch('imu_task.LSM6DSO32')
+    @patch('imu_task.LSM6DS3TRC')
     @pytest.mark.asyncio
-    async def test_imu_task_sensor_read_failure(self, mock_lsm6ds, mock_board, mock_busio, imu_config, mock_engine, mock_logger):
+    async def test_imu_task_sensor_read_failure(self, mock_lsm6ds3trc, mock_lsm6dso32, mock_lsm6ds33, mock_lsm6dsox, mock_lsm6ds, mock_board, mock_busio, imu_config, mock_engine, mock_logger):
         """Test IMU task when sensor reading fails."""
         # Mock sensor initialization
         mock_i2c = Mock()
         mock_busio.I2C.return_value = mock_i2c
-        
+
         mock_sensor = Mock()
         mock_sensor.acceleration = (None, None, None)
         mock_sensor.gyro = (None, None, None)
         mock_sensor.temperature = None
-        mock_lsm6ds.LSM6DSOX.return_value = mock_sensor
-        
-        # Mock range constants
+
+        # Mock the LSM6DSOX constructor to return our mock sensor
+        mock_lsm6dsox.return_value = mock_sensor
+
+        # Mock range constants - make attributes available
+        mock_lsm6ds.Range = Mock()
         mock_lsm6ds.Range.RANGE_4G = "4G"
+        mock_lsm6ds.GyroRange = Mock()
         mock_lsm6ds.GyroRange.RANGE_500_DPS = "500DPS"
+        mock_lsm6ds.Rate = Mock()
         mock_lsm6ds.Rate.RATE_104_HZ = "104HZ"
-        
+
         task = ImuTask(imu_config)
         result = await task.execute(mock_engine, mock_logger)
-        
+
         assert result["success"] is False
         assert "Failed to read valid data from IMU sensor" in result["error"]
 
@@ -347,6 +400,6 @@ class TestSensorTaskParameters:
         # Test invalid ranges
         with pytest.raises(ValueError):
             ImuParameters(accel_range="32G")
-        
+
         with pytest.raises(ValueError):
             ImuParameters(gyro_range="3000DPS")

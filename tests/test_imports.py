@@ -7,7 +7,7 @@ def test_basic_imports():
         import sys
         import os
         sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
-        
+
         from config import MachaConfig, load_config
         from task import Task, TaskManager
         from database import DatabaseManager
@@ -25,7 +25,7 @@ def test_sensor_task_imports():
         import sys
         import os
         sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
-        
+
         from baro_task import BaroTask
         from imu_task import ImuTask
         assert True
@@ -33,14 +33,30 @@ def test_sensor_task_imports():
         pytest.fail(f"Sensor task import failed: {e}")
 
 
+def test_mock_task_imports():
+    """Test that mock task modules can be imported."""
+    try:
+        import sys
+        import os
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+
+        from mock_camera_task import MockCameraTask
+        from mock_baro_task import MockBaroTask
+        from mock_imu_task import MockImuTask
+        from mock_metrics_task import MockMetricsTask
+        assert True
+    except ImportError as e:
+        pytest.fail(f"Mock task import failed: {e}")
+
+
 def test_config_validation():
     """Test basic config validation."""
     import sys
     import os
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
-    
+
     from config import BarometerParameters, ImuParameters
-    
+
     # Test valid barometer parameters
     baro_params = BarometerParameters(
         i2c_bus=1,
@@ -49,7 +65,7 @@ def test_config_validation():
     )
     assert baro_params.i2c_bus == 1
     assert baro_params.address == 0x77
-    
+
     # Test valid IMU parameters
     imu_params = ImuParameters(
         i2c_bus=1,
@@ -68,17 +84,17 @@ def test_invalid_config():
     import sys
     import os
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
-    
+
     from config import BarometerParameters, ImuParameters
     from pydantic import ValidationError
-    
+
     # Test invalid barometer address
     with pytest.raises(ValidationError):
         BarometerParameters(address=0x50)  # Invalid address
-    
+
     # Test invalid IMU ranges
     with pytest.raises(ValidationError):
         ImuParameters(accel_range="32G")  # Invalid range
-    
+
     with pytest.raises(ValidationError):
         ImuParameters(gyro_range="3000DPS")  # Invalid range

@@ -5,83 +5,55 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    # Core application dependencies (always needed)
     "pyyaml>=6.0.2",
     "colorlog>=6.8.2",
     "sqlalchemy>=2.0.0",
     "aiosqlite>=0.20.0",
-    "psutil>=6.1.0",
     "pydantic>=2.0.0",
-    "ruff>=0.11.13",
-    "pytest>=8.0.0",
+    "opencv-python>=4.11.0.86",
+    "numpy>=2.3.0",
+    "pillow>=10.0.0",
+    "pytest>=8.4.0",
     "pytest-asyncio>=0.26.0",
-    "pandas>=2.3.0",
-    "matplotlib>=3.10.3",
 ]
 
 [project.optional-dependencies]
-# Raspberry Pi specific dependencies
-pi-hardware = [
+# For Raspberry Pi deployment with real hardware
+pi = [
     "picamera2>=0.3.27",
     "adafruit-blinka>=8.0.0",
     "adafruit-circuitpython-bmp3xx>=1.3.0",
     "adafruit-circuitpython-lsm6ds>=4.0.0",
     "RPi.GPIO>=0.7.1",
     "tflite-runtime>=2.14.0",
-    "pycoral>=2.0.0",
+    "pycoral>=0.2.0",  # Fixed version
     "pillow>=10.0.0",
     "numpy>=1.24.0",
 ]
-# Development and testing
+
+# For development with mock tasks (no hardware needed)
 dev = [
+    "opencv-python>=4.8.0",  # For mock camera webcam support
+    "pillow>=10.0.0",        # For mock camera image generation
+    "numpy>=1.24.0",         # For mock AI/sensor data
+    "psutil>=6.1.0",         # For real metrics (optional in mocks)
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.26.0",
+    "pytest-cov>=4.0.0",
+    "ruff>=0.11.13",
+    "mypy>=1.0.0",
+]
+
+# For additional analysis/visualization tools
+analysis = [
+    "pandas>=2.3.0",
+    "matplotlib>=3.10.3",
+    "jupyter>=1.0.0",        # If you want notebooks
+]
+
+# For release management
+release = [
     "commitizen>=3.13.0",
     "pre-commit>=3.6.0",
-    "mypy>=1.0.0",
-    "pytest-cov>=4.0.0",
 ]
-# All extras combined
-all = [
-    "picamera2>=0.3.27",
-    "adafruit-blinka>=8.0.0",
-    "adafruit-circuitpython-bmp3xx>=1.3.0",
-    "adafruit-circuitpython-lsm6ds>=4.0.0",
-    "RPi.GPIO>=0.7.1",
-    "tflite-runtime>=2.14.0",
-    "pycoral>=2.0.0",
-    "pillow>=10.0.0",
-    "numpy>=1.24.0",
-    "commitizen>=3.13.0",
-    "pre-commit>=3.6.0",
-    "mypy>=1.0.0",
-    "pytest-cov>=4.0.0",
-]
-[tool.uv.pip]
-break-system-packages = true
-
-[tool.commitizen]
-name = "cz_conventional_commits"
-tag_format = "v$version"
-version_scheme = "semver"
-version_provider = "pep621"
-update_changelog_on_bump = true
-major_version_zero = true
-changelog_file = "CHANGELOG.md"
-changelog_format = "markdown"
-
-[tool.commitizen.settings]
-use_shortcuts = true
-
-[tool.ruff]
-line-length = 120
-target-version = "py311"
-
-[tool.ruff.lint]
-select = ["E", "F", "W", "I", "UP"]
-ignore = []
-
-[tool.ruff.format]
-quote-style = "double"
-
-[tool.pytest.ini_options]
-pythonpath = ["src"]
-asyncio_mode = "auto"
-testpaths = ["tests"]

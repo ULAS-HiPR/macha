@@ -11,6 +11,9 @@ from mock_camera_task import MockCameraTask
 from baro_task import BaroTask
 from imu_task import ImuTask
 from ai_task import AiTask
+from mock_baro_task import MockBaroTask
+from mock_imu_task import MockImuTask
+from mock_metrics_task import MockMetricsTask
 from config import MachaConfig, get_enabled_tasks
 
 
@@ -35,12 +38,15 @@ class TaskScheduler:
     def _initialize_tasks(self):
         """Initialize task instances based on configuration."""
         task_classes = {
-            "MetricsTask": MetricsTask, 
+            "MetricsTask": MetricsTask,
             "CameraTask": CameraTask,
             "MockCameraTask": MockCameraTask,
             "BaroTask": BaroTask,
             "ImuTask": ImuTask,
-            "AiTask": AiTask
+            "AiTask": AiTask,
+            "MockBaroTask": MockBaroTask,
+            "MockImuTask": MockImuTask,
+            "MockMetricsTask": MockMetricsTask
         }
 
         for task_config in self.task_configs:
