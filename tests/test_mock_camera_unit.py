@@ -16,7 +16,10 @@ from mock_camera_task import MockCameraTask
 @pytest.fixture
 def mock_config():
     """Create a test configuration with mock camera task."""
-    return MachaConfig(
+    temp_dir1 = tempfile.mkdtemp()
+    temp_dir2 = tempfile.mkdtemp()
+
+    config = MachaConfig(
         app={"name": "test", "debug": True},
         logging={
             "level": "INFO",
@@ -36,8 +39,8 @@ def mock_config():
                 "enabled": True,
                 "parameters": {
                     "cameras": [
-                        {"port": 0, "name": "test_cam0", "output_folder": "test_output"},
-                        {"port": 1, "name": "test_cam1", "output_folder": "test_output2"}
+                        {"port": 0, "name": "test_cam0", "output_folder": temp_dir1},
+                        {"port": 1, "name": "test_cam1", "output_folder": temp_dir2}
                     ],
                     "image_format": "jpg",
                     "resolution": {"width": 640, "height": 480},
@@ -49,6 +52,13 @@ def mock_config():
             }
         ]
     )
+
+    yield config
+
+    # Cleanup
+    import shutil
+    shutil.rmtree(temp_dir1, ignore_errors=True)
+    shutil.rmtree(temp_dir2, ignore_errors=True)
 
 
 @pytest.fixture

@@ -4,6 +4,8 @@ import logging
 import os
 import platform
 import random
+import tempfile
+import shutil
 from datetime import datetime
 from pathlib import Path
 from sqlalchemy import text
@@ -71,6 +73,26 @@ class MockCameraTask(Task):
         # Create test image set
         self._prepare_mock_assets()
 
+    def __del__(self):
+        """Cleanup when object is destroyed."""
+        self.cleanup()
+
+    def cleanup(self):
+        """Clean up resources and temporary files."""
+        try:
+            # Release OpenCV cameras
+            for cap in self.opencv_cameras.values():
+                if cap and cap.isOpened():
+                    cap.release()
+            self.opencv_cameras.clear()
+
+            # Remove temporary mock assets directory
+            if hasattr(self, 'mock_assets_dir') and self.mock_assets_dir.exists():
+                shutil.rmtree(self.mock_assets_dir, ignore_errors=True)
+        except Exception:
+            # Ignore cleanup errors to avoid issues during shutdown
+            pass
+
     def _determine_strategy(self, strategy: str) -> str:
         """Determine the best mock strategy based on system and preference."""
         if strategy == "auto":
@@ -98,7 +120,9 @@ class MockCameraTask(Task):
 
     def _prepare_mock_assets(self):
         """Prepare mock assets directory and sample images."""
-        self.mock_assets_dir = Path("mock_assets")
+        # Use temporary directory to avoid cluttering working directory
+        temp_dir = tempfile.mkdtemp(prefix="mock_assets_")
+        self.mock_assets_dir = Path(temp_dir)
         self.mock_assets_dir.mkdir(exist_ok=True)
 
         # Create some sample static images if they don't exist

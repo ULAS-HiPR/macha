@@ -49,7 +49,8 @@ def mock_logger():
 @pytest.fixture
 def ai_config():
     """Create a test configuration with AI task."""
-    return MachaConfig(
+    temp_dir = tempfile.mkdtemp()
+    config = MachaConfig(
         app={"name": "test", "debug": True},
         logging={
             "level": "INFO",
@@ -68,8 +69,7 @@ def ai_config():
                 "frequency": 10,
                 "enabled": True,
                 "parameters": {
-                    "cameras": [{"port": 0, "name": "cam0", "output_folder": "test_images"}],
-                    "image_format": "jpg",
+                    "cameras": [{"port": 0, "name": "cam0", "output_folder": "/tmp/images"}],
                     "resolution": {"width": 640, "height": 480}
                 }
             },
@@ -83,7 +83,7 @@ def ai_config():
                     "model_name": "test_model",
                     "model_version": "1.0.0",
                     "use_coral_tpu": True,
-                    "output_folder": "test_segmentation",
+                    "output_folder": os.path.join(temp_dir, "test_segmentation"),
                     "confidence_threshold": 0.7,
                     "max_queue_size": 10,
                     "processing_timeout": 5,
@@ -93,6 +93,12 @@ def ai_config():
             }
         ]
     )
+
+    yield config
+
+    # Cleanup
+    import shutil
+    shutil.rmtree(temp_dir, ignore_errors=True)
 
 
 @pytest.fixture
@@ -221,7 +227,11 @@ class TestAiTask:
                         "class": "AiTask",
                         "frequency": 5,  # Faster than camera - should fail
                         "enabled": True,
-                        "parameters": {"model_path": "test.tflite", "model_name": "test"}
+                        "parameters": {
+                            "model_path": "test.tflite",
+                            "model_name": "test",
+                            "output_folder": "/tmp/test_segmentation"
+                        }
                     }
                 ]
             )
@@ -450,20 +460,20 @@ class TestAiTaskIntegration:
         mock_np.zeros.return_value = mock_np.zeros((224, 224, 3), dtype=mock_np.uint8)
 
         # Mock file operations
-        with patch('ai_task.Path.mkdir'):
-            with patch('ai_task.Image.fromarray') as mock_fromarray:
-                mock_result_image = Mock()
-                mock_fromarray.return_value = mock_result_image
-                mock_result_image.save = Mock()
+        with patch('ai_task.Path.mkdir'), \
+             patch('ai_task.Image.fromarray') as mock_fromarray, \
+             patch('ai_task.Path.stat') as mock_stat:
 
-                with patch('ai_task.Path.stat') as mock_stat:
-                    mock_stat.return_value.st_size = 1024
+            mock_result_image = Mock()
+            mock_fromarray.return_value = mock_result_image
+            mock_result_image.save = Mock()
+            mock_stat.return_value.st_size = 1024
 
-                    task = AiTask(ai_config)
-                    result = await task.execute(mock_engine, mock_logger)
+            task = AiTask(ai_config)
+            result = await task.execute(mock_engine, mock_logger)
 
-                    assert result["processed"] >= 0  # Should process some images
-                    assert "status" in result
+            assert result["processed"] >= 0  # Should process some images
+            assert "status" in result
 
 
 # Error Handling Tests

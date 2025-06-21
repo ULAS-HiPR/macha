@@ -47,16 +47,16 @@ def mock_logger():
 def integrated_config():
     """Create a test configuration with all mock tasks."""
     with tempfile.TemporaryDirectory() as temp_dir:
-        yield MachaConfig(
+        config = MachaConfig(
             app={"name": "test_integration", "debug": True},
             logging={
                 "level": "INFO",
-                "file": {"path": "test.log"},
+                "file": {"path": os.path.join(temp_dir, "test.log")},
                 "console": {"format": "test"}
             },
             db={
-                "filename": "test.db",
-                "connection_string": "sqlite:///test.db",
+                "filename": os.path.join(temp_dir, "test.db"),
+                "connection_string": f"sqlite:///{os.path.join(temp_dir, 'test.db')}",
                 "overwrite": False
             },
             tasks=[
@@ -106,6 +106,7 @@ def integrated_config():
                 }
             ]
         )
+        yield config
 
 
 class TestMockTaskIntegration:
