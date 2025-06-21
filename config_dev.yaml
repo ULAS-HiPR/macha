@@ -28,15 +28,15 @@ tasks:
       enabled: true
 
     - name: mock_camera_capture
-      class: MockCameraTask  # Using mock camera for development
+      class: MockCameraTask # Using mock camera for development
       frequency: 15
       enabled: true
       parameters:
           cameras:
-              - port: 0  # MacBook built-in camera (if using OpenCV)
+              - port: 0 # MacBook built-in camera (if using OpenCV)
                 name: mock_cam0
                 output_folder: dev_images/cam0
-              - port: 1  # Mock second camera
+              - port: 1 # Mock second camera
                 name: mock_cam1
                 output_folder: dev_images/cam1
           image_format: jpg
@@ -48,20 +48,20 @@ tasks:
           capture_timeout: 5
           retry_attempts: 2
 
-    # Disable hardware sensors for development
+    # Use mock hardware sensors for development
     - name: barometer_reading
-      class: BaroTask
+      class: MockBaroTask
       frequency: 30
-      enabled: false  # Disabled for MacBook development
+      enabled: true # Using mock sensor for development
       parameters:
           i2c_bus: 1
           address: 0x77
           sea_level_pressure: 1013.25
 
     - name: imu_reading
-      class: ImuTask
+      class: MockImuTask
       frequency: 30
-      enabled: false  # Disabled for MacBook development
+      enabled: true # Using mock sensor for development
       parameters:
           i2c_bus: 1
           address: 0x6A
@@ -70,15 +70,18 @@ tasks:
 
     - name: ai_segmentation
       class: AiTask
-      frequency: 30  # Must be >= camera frequency (15s) and divisible
-      enabled: false  # Disabled by default until model is available
+      frequency: 30 # Must be >= camera frequency (15s) and divisible
+      enabled: true # Enabled for development testing
       parameters:
           model_path: models/landing_segmentation_dev.tflite
           model_name: landing_segmentation_dev
           model_version: "1.0.0"
-          use_coral_tpu: false  # Disabled for MacBook development
+          use_coral_tpu: false # Disabled for MacBook development
           output_folder: dev_segmentation_outputs
           confidence_threshold: 0.5
           max_queue_size: 20
           processing_timeout: 10
-          max_retries: 1 
+          max_retries: 1
+          output_format: png
+          save_confidence_overlay: true
+          class_names: ["background", "safe_landing", "unsafe_landing"]

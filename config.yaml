@@ -66,8 +66,8 @@ tasks:
 
     - name: ai_segmentation
       class: AiTask
-      frequency: 10  # Must be >= camera frequency (10s) and divisible
-      enabled: false  # Disabled by default until model is available
+      frequency: 10 # Must be >= camera frequency (10s) and divisible
+      enabled: true # Enabled for Pi deployment
       parameters:
           model_path: models/landing_segmentation_edgetpu.tflite
           model_name: landing_segmentation_v1
