@@ -66,16 +66,15 @@ tasks:
 
     - name: ai_segmentation
       class: AiTask
-      frequency: 10 # Must be >= camera frequency (10s) and divisible
+      frequency: 10
       enabled: true
       parameters:
-          model_path: models/mini.tflite
-          model_name: SZNet_mini
+          model_path: models/SZNet_mini.tflite
+          model_name: landing_segmentation_v1
           model_version: "1.0.0"
-          use_coral_tpu: false
-          input_folder: images/cam0
+          use_coral_tpu: true
           output_folder: segmentation_outputs
-          confidence_threshold: null
+          confidence_threshold: 0.6
           max_queue_size: 30
           processing_timeout: 8
           max_retries: 2

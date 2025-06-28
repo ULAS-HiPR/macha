@@ -115,7 +115,7 @@ class BarometerParameters(BaseModel):
     i2c_bus: int = Field(default=1, ge=0, description="I2C bus number")
     address: int = Field(default=0x77, ge=0x00, le=0xFF, description="I2C address")
     sea_level_pressure: float = Field(default=1013.25, gt=0, description="Sea level pressure in hPa")
-    
+
     @field_validator("address")
     @classmethod
     def validate_address_format(cls, v):
@@ -129,7 +129,7 @@ class ImuParameters(BaseModel):
     address: int = Field(default=0x6A, ge=0x00, le=0xFF, description="I2C address")
     accel_range: str = Field(default="4G", pattern="^(2G|4G|8G|16G)$", description="Accelerometer range")
     gyro_range: str = Field(default="500DPS", pattern="^(125DPS|250DPS|500DPS|1000DPS|2000DPS)$", description="Gyroscope range")
-    
+
     @field_validator("address")
     @classmethod
     def validate_address_format(cls, v):
@@ -144,17 +144,17 @@ class AiParameters(BaseModel):
     model_version: str = Field(default="1.0.0", description="Model version")
     use_coral_tpu: bool = Field(default=True, description="Use Coral TPU acceleration")
     output_folder: str = Field(default="segmentation_outputs", description="Directory for segmentation masks")
-    
+
     # Processing parameters
     confidence_threshold: float = Field(default=0.5, ge=0.0, le=1.0, description="Minimum confidence for classification")
     max_queue_size: int = Field(default=50, ge=1, description="Maximum unprocessed images in queue")
     processing_timeout: int = Field(default=10, ge=1, le=60, description="Processing timeout per image")
     max_retries: int = Field(default=2, ge=0, le=5, description="Maximum retry attempts per image")
-    
+
     # Output parameters
     output_format: str = Field(default="png", pattern="^(png|jpg|bmp)$", description="Output image format")
     save_confidence_overlay: bool = Field(default=True, description="Save confidence as overlay")
-    
+
     # Class mapping
     class_names: List[str] = Field(default=["background", "safe_landing", "unsafe_landing"], description="Class names for segmentation")
     class_colors: Dict[str, List[int]] = Field(
@@ -250,10 +250,10 @@ class MachaConfig(BaseModel):
 
     @model_validator(mode="after")
     def validate_tasks(self):
-        camera_tasks = [t for t in self.tasks if t.class_name in ["CameraTask", "MockCameraTask"]] 
+        camera_tasks = [t for t in self.tasks if t.class_name in ["CameraTask", "MockCameraTask"]]
         baro_tasks = [t for t in self.tasks if t.class_name == "BaroTask"]
         imu_tasks = [t for t in self.tasks if t.class_name == "ImuTask"]
-        
+
         # Validate camera tasks (including mock cameras)
         for task in camera_tasks:
             if task.parameters is None:
@@ -290,7 +290,7 @@ class MachaConfig(BaseModel):
                 raise ValueError(
                     f"{task.class_name} '{task.name}' has invalid parameters"
                 )
-        
+
         # AI task frequency validation
         ai_tasks = [t for t in self.tasks if t.class_name == "AiTask" and t.enabled]
         if ai_tasks and camera_tasks:
@@ -308,7 +308,7 @@ class MachaConfig(BaseModel):
                             f"AI task '{ai_task.name}' frequency ({ai_task.frequency}s) must be "
                             f"divisible by camera frequency ({camera_freq}s)"
                         )
-        
+
         return self
 
 
@@ -329,6 +329,7 @@ def load_config(config_path: str = "config.yaml") -> MachaConfig:
         config = MachaConfig(**raw_config)
         return config
     except Exception as e:
+        print("CONFIG VALIDATION ERROR:", e)
         raise ValueError(f"Configuration validation failed: {e}")
 
 
