@@ -11,6 +11,7 @@ from mock_camera_task import MockCameraTask
 from baro_task import BaroTask
 from imu_task import ImuTask
 from ai_task import AiTask
+from picamera2_task import Picamera2Task
 from mock_baro_task import MockBaroTask
 from mock_imu_task import MockImuTask
 from mock_metrics_task import MockMetricsTask
@@ -41,6 +42,7 @@ class TaskScheduler:
         task_classes = {
             "MetricsTask": MetricsTask,
             "CameraTask": CameraTask,
+            "Picamera2Task": Picamera2Task,
             "MockCameraTask": MockCameraTask,
             "BaroTask": BaroTask,
             "ImuTask": ImuTask,

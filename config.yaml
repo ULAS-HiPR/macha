@@ -28,7 +28,7 @@ tasks:
       enabled: true
 
     - name: camera_capture
-      class: CameraTask
+      class: Picamera2Task
       frequency: 5
       enabled: true
       parameters:
@@ -65,19 +65,24 @@ tasks:
           gyro_range: "500DPS"
 
     - name: ai_segmentation
-      class: MockAiTask
+      class: AiTask
       frequency: 10 # Must be >= camera frequency (10s) and divisible
-      enabled: true # Enabled for Pi deployment with mock AI
+      enabled: true
       parameters:
-          model_path: models/landing_segmentation_edgetpu.tflite
-          model_name: landing_segmentation_v1
+          model_path: models/mini.tflite
+          model_name: SZNet_mini
           model_version: "1.0.0"
-          use_coral_tpu: true
+          use_coral_tpu: false
+          input_folder: images/cam0
           output_folder: segmentation_outputs
-          confidence_threshold: 0.6
+          confidence_threshold: null
           max_queue_size: 30
           processing_timeout: 8
           max_retries: 2
           output_format: png
           save_confidence_overlay: true
           class_names: ["background", "safe_landing", "unsafe_landing"]
+          class_colors:
+              background: [0, 0, 0]
+              safe_landing: [0, 255, 0]
+              unsafe_landing: [255, 0, 0]
