@@ -51,7 +51,8 @@ sudo apt install -y \
     python3-pip \
     python3-venv \
     libatlas-base-dev \
-    ffmpeg
+    ffmpeg \
+    python3-pycoral
 
 # Add user to required groups
 echo "Adding user to video and gpio groups..."

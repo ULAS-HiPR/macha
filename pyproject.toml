@@ -22,6 +22,8 @@ dependencies = [
     "psutil>=7.0.0",
     "adafruit-blinka>=8.58.1",
     "adafruit-circuitpython-bmp3xx>=1.3.23",
+    "pycoral>=0.2.0",
+    "tflite-runtime>=2.14.0",
 ]
 
 [project.optional-dependencies]

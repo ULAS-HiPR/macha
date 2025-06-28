@@ -1412,12 +1412,14 @@ dependencies = [
     { name = "pandas" },
     { name = "pillow" },
     { name = "psutil" },
+    { name = "pycoral" },
     { name = "pydantic" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "pytest-cov" },
     { name = "pyyaml" },
     { name = "sqlalchemy" },
+    { name = "tflite-runtime" },
 ]
 
 [package.optional-dependencies]
@@ -1481,6 +1483,7 @@ requires-dist = [
     { name = "pre-commit", marker = "extra == 'release'", specifier = ">=3.6.0" },
     { name = "psutil", specifier = ">=7.0.0" },
     { name = "psutil", marker = "extra == 'dev'", specifier = ">=6.1.0" },
+    { name = "pycoral", specifier = ">=0.2.0" },
     { name = "pycoral", marker = "extra == 'pi'", specifier = ">=0.2.0" },
     { name = "pydantic", specifier = ">=2.0.0" },
     { name = "pytest", specifier = ">=8.4.0" },
@@ -1493,6 +1496,7 @@ requires-dist = [
     { name = "rpi-gpio", marker = "extra == 'pi'", specifier = ">=0.7.1" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.11.13" },
     { name = "sqlalchemy", specifier = ">=2.0.0" },
+    { name = "tflite-runtime", specifier = ">=2.14.0" },
     { name = "tflite-runtime", marker = "extra == 'pi'", specifier = ">=2.14.0" },
 ]
 provides-extras = ["pi", "dev", "analysis", "release"]

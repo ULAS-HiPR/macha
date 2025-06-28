@@ -13,7 +13,8 @@ import asyncio
 try:
     import tflite_runtime.interpreter as tflite
 except ImportError:
-    import tensorflow.lite as tflite  # fallback for environments with full TF
+        # Use pycoral's make_interpreter for Edge TPU
+    from pycoral.utils.edgetpu import make_interpreter
 
 class AiTask(Task):
     """
