@@ -3,7 +3,7 @@ name = "macha"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.9"
 dependencies = [
     # Core application dependencies (always needed)
     "pyyaml>=6.0.2",
@@ -16,7 +16,6 @@ dependencies = [
     "pytest>=8.4.0",
     "pytest-asyncio>=0.26.0",
     "pytest-cov>=6.1.1",
-    "matplotlib>=3.10.3",
     "pandas>=2.3.0",
     "psutil>=7.0.0",
     "adafruit-blinka>=8.58.1",
@@ -24,6 +23,8 @@ dependencies = [
     "pycoral>=0.2.0",
     "tflite-runtime>=2.14.0",
     "numpy<2",
+    "picamera2>=0.3.27",
+    "lgpio>=0.2.2.0",
 ]
 
 [project.optional-dependencies]
@@ -56,8 +57,7 @@ dev = [
 # For additional analysis/visualization tools
 analysis = [
     "pandas>=2.3.0",
-    "matplotlib>=3.10.3",
-    "jupyter>=1.0.0",        # If you want notebooks
+    "jupyter>=1.0.0", # If you want notebooks
 ]
 
 # For release management
