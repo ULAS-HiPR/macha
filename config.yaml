@@ -28,7 +28,7 @@ tasks:
       enabled: true
 
     - name: camera_capture
-      class: Picamera2Task
+      class: CameraTask
       frequency: 5
       enabled: true
       parameters:
