@@ -25,6 +25,7 @@ dependencies = [
     "numpy<2",
     "picamera2>=0.3.27",
     "lgpio>=0.2.2.0",
+    "adafruit-circuitpython-lsm6ds>=4.5.15",
 ]
 
 [project.optional-dependencies]

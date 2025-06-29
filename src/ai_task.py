@@ -69,7 +69,7 @@ class AiTask(Task):
 
         for image_path in image_files:
             try:
-                mask_path, overlay_path = await self.process_image(image_path, logger)
+                mask_path, overlay_path = await self.process_image(image_path, logger, engine)
                 results["processed"] += 1
                 results["masks"].append({
                     "input": str(image_path),
@@ -83,7 +83,7 @@ class AiTask(Task):
         logger.info(f"AI segmentation complete: {results['processed']} processed, {results['failed']} failed")
         return results
 
-    async def process_image(self, image_path, logger):
+    async def process_image(self, image_path, logger, engine):
         """
         Preprocess image, run inference, save mask and overlay.
         Returns (mask_path, overlay_path)
@@ -137,20 +137,32 @@ class AiTask(Task):
             overlay_path = Path(self.output_folder) / overlay_filename
             overlay_img.save(overlay_path)
 
-        # Optionally, store results in DB
+        # Store results in DB - simplified approach without foreign keys
         try:
             async with engine.connect() as conn:
+                # Get file size
+                mask_size = mask_path.stat().st_size if mask_path.exists() else 0
+
                 await conn.execute(
                     text("""
-                    INSERT INTO ai_results
-                    (input_image, mask_path, overlay_path, timestamp)
-                    VALUES (:input_image, :mask_path, :overlay_path, :timestamp)
+                    INSERT INTO segmentation_results
+                    (source_image_id, ai_model_id, output_filepath, output_filename,
+                     file_size_bytes, resolution, format, metadata)
+                    VALUES (0, 0, :output_filepath, :output_filename,
+                            :file_size_bytes, :resolution, :format, :metadata)
                     """),
                     {
-                        "input_image": str(image_path),
-                        "mask_path": str(mask_path),
-                        "overlay_path": str(overlay_path) if overlay_path else "",
-                        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S")
+                        "output_filepath": str(mask_path),
+                        "output_filename": mask_path.name,
+                        "file_size_bytes": mask_size,
+                        "resolution": "500x500",
+                        "format": self.output_format,
+                        "metadata": str({
+                            "input_image": str(image_path),
+                            "overlay_path": str(overlay_path) if overlay_path else None,
+                            "confidence_threshold": self.confidence_threshold,
+                            "model_path": self.model_path
+                        })
                     }
                 )
                 await conn.commit()
